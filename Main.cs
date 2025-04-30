@@ -1,7 +1,7 @@
 ﻿using MelonLoader;
 
 
-[assembly: MelonInfo(typeof(MonsieurMeh.Mods.TLD.LegendaryWolves.Main), "LegendaryWolves", "0.0.4", "MonsieurMeh", null)]
+[assembly: MelonInfo(typeof(MonsieurMeh.Mods.TLD.LegendaryWolves.Main), "LegendaryWolves", "0.0.5", "MonsieurMeh", null)]
 [assembly: MelonGame("Hinterland", "TheLongDark")]
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
@@ -23,15 +23,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mManager.Initialize(new Settings(), (s) => LoggerInstance.Msg(s));
             mInitialized = mManager != null;
             return mInitialized;
-        }
-
-
-        public override void OnUpdate()
-        {
-            if (mInitialized)
-            {
-                mManager.Update();
-            }
         }
     }
 }

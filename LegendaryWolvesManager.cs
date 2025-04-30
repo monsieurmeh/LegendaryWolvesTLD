@@ -1,4 +1,6 @@
 ﻿using Il2Cpp;
+using Il2CppTLD.AI;
+using System.Buffers.Text;
 using UnityEngine;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
@@ -35,10 +37,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected bool mEnabled = false;
         protected long mStartTime = System.DateTime.Now.Ticks;
         protected long mLastReadoutTime = System.DateTime.Now.Ticks;
-        protected BaseAi mSelectedBaseAI;
+
+        protected List<BaseAi> mAugmentedAIList = new List<BaseAi>();
 
         protected long TicksSinceStart { get { return System.DateTime.Now.Ticks - mStartTime; } }
-        public BaseAi SelectedBaseAI { get { return mSelectedBaseAI; } set { mSelectedBaseAI = value; } }
 
 
         public void Initialize(Settings settings, Action<string> logMessageAction)
@@ -54,39 +56,43 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        public void Update()
+        public bool TryAugmentWolf(GameObject spawnablePrefab, float augmentValue)
         {
-            if (!mEnabled || !mInitialized)
+            if (!spawnablePrefab.TryGetComponent(out BaseAi baseAI))
             {
-                return;
+                return false;
             }
+            if (baseAI.m_AiType != AiType.Predator)
+            {
+                return false;
+            }
+            if (baseAI.m_AiSubType != AiSubType.Wolf)
+            {
+                return false;
+            }
+            if (mAugmentedAIList.Contains(baseAI))
+            {
+                return false;
+            }
+            Log($"Watch out, augmenting {spawnablePrefab.name} size/speed by factor of {augmentValue}!");
+            mAugmentedAIList.Add(baseAI);
+            baseAI.m_RunSpeed *= augmentValue;
+            baseAI.m_StalkSpeed *= augmentValue;
+            baseAI.m_WalkSpeed *= augmentValue;
+            //baseAI.m_StalkSlowlySpeed *= augmentValue;
+            baseAI.m_turnSpeed *= augmentValue;
+            baseAI.m_TurnSpeedDegreesPerSecond *= augmentValue;
+            //baseAI.m_StalkCatchUpSpeed *= augmentValue;
+            Vector3 newScale = new Vector3(augmentValue, augmentValue, augmentValue);
+            baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+
+            return false;
         }
 
 
         public void Log(string message)
         {
             mLogMessageAction.Invoke($"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}");
-        }
-
-
-        public void Enable()
-        {
-            if (mEnabled || !mInitialized)
-            {
-                return;
-            }
-            Log("Enabling LegendaryWolvesManager");
-        }
-
-
-        public void Disable()
-        {
-            if (!mEnabled || !mInitialized)
-            {
-                return;
-            }
-            Log("Disabling LegendaryWolvesManager");
-            mEnabled = false;
         }
     }
 }
