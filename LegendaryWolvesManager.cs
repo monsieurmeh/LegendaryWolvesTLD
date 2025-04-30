@@ -7,8 +7,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
     {
         #region Consts & Enums
 
-        const long TicksPerMillisecond = 10000;
-        const long TicksPerSecond = TicksPerMillisecond * 1000;
+        const float MillisecondsPerTick = 1 / 10000;
+        const float SecondsPerTick = MillisecondsPerTick / 1000;
 
         #endregion
 
@@ -65,7 +65,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public void Log(string message)
         {
-            mLogMessageAction.Invoke($"{TicksSinceStart}t/{TicksSinceStart / TicksPerMillisecond}ms] {message}");
+            mLogMessageAction.Invoke($"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}");
         }
 
 
