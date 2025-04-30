@@ -17,5 +17,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 LegendaryWolvesManager.Instance.TryAugmentWolf(spawnablePrefab, (new System.Random().Next(100, 500) / 100));
             }
         }
+
+
+        [HarmonyPatch(typeof(BaseAi), "Despawn")]
+        internal class BaseAiPatches_Despawn
+        {
+            public static void Prefix(BaseAi __instance)
+            {
+                LegendaryWolvesManager.Instance.TryUnaugmentWolf(__instance);
+            }
+        }
     }
 }

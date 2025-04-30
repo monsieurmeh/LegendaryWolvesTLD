@@ -62,6 +62,43 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return false;
             }
+            Vector3 newScale = new Vector3(1, 1, 1);
+            if (baseAI.m_AiType != AiType.Predator)
+            {
+                baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                return false;
+            }
+            if (baseAI.m_AiSubType != AiSubType.Wolf)
+            {
+                baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                return false;
+            }
+            if (mAugmentedAIList.Contains(baseAI))
+            {
+                baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                return false;
+            }
+            Log($"Watch out, augmenting {spawnablePrefab.name} size/speed by factor of {augmentValue}!");
+            AugmentWolf(baseAI, augmentValue);
+            return true;
+        }
+
+        
+        protected void AugmentWolf(BaseAi baseAI, float augmentValue)
+        {
+            mAugmentedAIList.Add(baseAI);
+            baseAI.m_RunSpeed *= augmentValue;
+            baseAI.m_StalkSpeed *= augmentValue;
+            baseAI.m_WalkSpeed *= augmentValue;
+            baseAI.m_turnSpeed *= augmentValue;
+            baseAI.m_TurnSpeedDegreesPerSecond *= augmentValue;
+            Vector3 newScale = new Vector3(augmentValue, augmentValue, augmentValue);
+            baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+        }
+
+
+        public bool TryUnaugmentWolf(BaseAi baseAI)
+        {
             if (baseAI.m_AiType != AiType.Predator)
             {
                 return false;
@@ -70,23 +107,21 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return false;
             }
-            if (mAugmentedAIList.Contains(baseAI))
+            if (!mAugmentedAIList.Contains(baseAI))
             {
                 return false;
             }
-            Log($"Watch out, augmenting {spawnablePrefab.name} size/speed by factor of {augmentValue}!");
-            mAugmentedAIList.Add(baseAI);
-            baseAI.m_RunSpeed *= augmentValue;
-            baseAI.m_StalkSpeed *= augmentValue;
-            baseAI.m_WalkSpeed *= augmentValue;
-            //baseAI.m_StalkSlowlySpeed *= augmentValue;
-            baseAI.m_turnSpeed *= augmentValue;
-            baseAI.m_TurnSpeedDegreesPerSecond *= augmentValue;
-            //baseAI.m_StalkCatchUpSpeed *= augmentValue;
-            Vector3 newScale = new Vector3(augmentValue, augmentValue, augmentValue);
-            baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+            Log($"Previously augmented AI found on {baseAI.gameObject.name}, un-augmenting...");
+            UnaugmentWolf(baseAI);
+            return true;
+        }
 
-            return false;
+
+        protected void UnaugmentWolf(BaseAi baseAI)
+        {
+            mAugmentedAIList.Remove(baseAI);
+            Vector3 newScale = new Vector3(1, 1, 1);
+            baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
         }
 
 
