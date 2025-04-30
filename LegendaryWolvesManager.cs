@@ -38,54 +38,83 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected long mStartTime = System.DateTime.Now.Ticks;
         protected long mLastReadoutTime = System.DateTime.Now.Ticks;
 
-        protected List<BaseAi> mAugmentedAIList = new List<BaseAi>();
+        protected List<BaseAi> mAugmentedAIList;
 
         protected long TicksSinceStart { get { return System.DateTime.Now.Ticks - mStartTime; } }
 
 
-        public void Initialize(Settings settings, Action<string> logMessageAction)
+        public bool Initialize(Settings settings, Action<string> logMessageAction)
         {
             if (mInitialized)
             {
-                return;
+                return false;
             }
             mInitialized = true;
             mStartTime = System.DateTime.Now.Ticks;
             mSettings = settings;
             mLogMessageAction = logMessageAction;
+            mAugmentedAIList = new List<BaseAi>();
+            return true;
+        }
+
+
+        public bool Shutdown()
+        {
+            if (!mInitialized)
+            {
+                return false;
+            }
+            for (int i = 0, iMax = mAugmentedAIList.Count; i < iMax; i++)
+            {
+                TryUnaugmentWolf(mAugmentedAIList[i]);
+            }
+            mAugmentedAIList.Clear();
+            mInitialized = false;
+            mSettings = null;
+            mLogMessageAction = null;
+            return true;
         }
 
 
         public bool TryAugmentWolf(GameObject spawnablePrefab, float augmentValue)
         {
-            if (!spawnablePrefab.TryGetComponent(out BaseAi baseAI))
+            try
             {
+                if (!spawnablePrefab.TryGetComponent(out BaseAi baseAI))
+                {
+                    return false;
+                }
+                Vector3 newScale = new Vector3(1, 1, 1);
+                if (baseAI.m_AiType != AiType.Predator)
+                {
+                    baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                    return false;
+                }
+                if (baseAI.m_AiSubType != AiSubType.Wolf)
+                {
+                    baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                    return false;
+                }
+                if (mAugmentedAIList.Contains(baseAI))
+                {
+                    baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                    return false;
+                }
+                AugmentWolf(baseAI, augmentValue);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Log($"Error while trying to augment wolf ai: {e}");
                 return false;
             }
-            Vector3 newScale = new Vector3(1, 1, 1);
-            if (baseAI.m_AiType != AiType.Predator)
-            {
-                baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
-                return false;
-            }
-            if (baseAI.m_AiSubType != AiSubType.Wolf)
-            {
-                baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
-                return false;
-            }
-            if (mAugmentedAIList.Contains(baseAI))
-            {
-                baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
-                return false;
-            }
-            Log($"Watch out, augmenting {spawnablePrefab.name} size/speed by factor of {augmentValue}!");
-            AugmentWolf(baseAI, augmentValue);
-            return true;
         }
 
         
         protected void AugmentWolf(BaseAi baseAI, float augmentValue)
         {
+            augmentValue = Mathf.Clamp(augmentValue, 1, 10);
+            Log($"Watch out, augmenting {baseAI.gameObject.name} size/speed by factor of {augmentValue}!");
             mAugmentedAIList.Add(baseAI);
             baseAI.m_RunSpeed *= augmentValue;
             baseAI.m_StalkSpeed *= augmentValue;
@@ -99,22 +128,27 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public bool TryUnaugmentWolf(BaseAi baseAI)
         {
-            if (baseAI.m_AiType != AiType.Predator)
+            try
             {
+                if (baseAI == null)
+                {
+                    return false;
+                }
+                if (!mAugmentedAIList.Contains(baseAI))
+                {
+                    return false;
+                }
+                Log($"Previously augmented AI found on {baseAI.gameObject.name}, un-augmenting...");
+                UnaugmentWolf(baseAI);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Log($"Error while trying to augment wolf ai: {e}");
                 return false;
             }
-            if (baseAI.m_AiSubType != AiSubType.Wolf)
-            {
-                return false;
-            }
-            if (!mAugmentedAIList.Contains(baseAI))
-            {
-                return false;
-            }
-            Log($"Previously augmented AI found on {baseAI.gameObject.name}, un-augmenting...");
-            UnaugmentWolf(baseAI);
-            return true;
         }
+    
 
 
         protected void UnaugmentWolf(BaseAi baseAI)

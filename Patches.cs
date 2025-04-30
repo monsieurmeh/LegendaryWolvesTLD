@@ -14,7 +14,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             public static void Postfix(GameObject spawnablePrefab)
             {
-                LegendaryWolvesManager.Instance.TryAugmentWolf(spawnablePrefab, (new System.Random().Next(100, 500) / 100));
+                LegendaryWolvesManager.Instance.TryAugmentWolf(spawnablePrefab, new System.Random().Next(100, 500) * 0.01f);
             }
         }
 
