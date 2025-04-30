@@ -24,6 +24,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             internal static readonly LegendaryWolvesManager instance = new LegendaryWolvesManager();
         }
 
+        private LegendaryWolvesManager() { }
+        public static LegendaryWolvesManager Instance { get { return Nested.instance; } }
+
         #endregion
 
         protected Action<string> mLogMessageAction;
@@ -32,11 +35,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected bool mEnabled = false;
         protected long mStartTime = System.DateTime.Now.Ticks;
         protected long mLastReadoutTime = System.DateTime.Now.Ticks;
+        protected BaseAi mSelectedBaseAI;
 
         protected long TicksSinceStart { get { return System.DateTime.Now.Ticks - mStartTime; } }
+        public BaseAi SelectedBaseAI { get { return mSelectedBaseAI; } set { mSelectedBaseAI = value; } }
 
-        private LegendaryWolvesManager() { }
-        public static LegendaryWolvesManager Instance { get { return Nested.instance; } }
 
         public void Initialize(Settings settings, Action<string> logMessageAction)
         {
