@@ -60,7 +60,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected void Log(string message)
+        public void Log(string message)
         {
             mLogMessageAction.Invoke($"{TicksSinceStart}t/{TicksSinceStart / TicksPerMillisecond}ms] {message}");
         }
