@@ -12,10 +12,29 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
     public class BigWolf : BaseWolf
     {
+        protected Quaternion mCurrentRotation;
         protected float mAugmentFactor;
         public override WolfTypes WolfType { get { return WolfTypes.BigWolf; } }
 
         public BigWolf(BaseAi target, float augmentFactor = 0f) : base(target) { mAugmentFactor = augmentFactor; }
+
+
+        protected override void Process()
+        {
+            switch (mTarget?.m_CurrentMode ?? AiMode.None)
+            {
+                case AiMode.Idle:
+                    mTarget.ProcessIdle();
+                    //spin like your life depends on it mf
+                    mCurrentRotation *= Quaternion.Euler(Vector3.up * 5);
+                    mTarget.gameObject?.transform?.set_localRotation_Injected(ref mCurrentRotation);
+                    break;
+                default:
+                    base.Process();
+                    break;
+            }
+        }
+
 
         public override void Augment()
         {

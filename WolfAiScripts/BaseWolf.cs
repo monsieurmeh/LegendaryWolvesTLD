@@ -28,93 +28,93 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public virtual void UnAugment() { }
 
 
-        protected virtual void PreProcess(BaseAi baseAi)
+        protected virtual void PreProcess()
         {
-            baseAi.ProcessCommonPre();
+            mTarget.ProcessCommonPre();
         }
 
 
-        protected virtual void Process(BaseAi baseAi)
+        protected virtual void Process()
         {
-            switch (baseAi?.m_CurrentMode ?? AiMode.None)
+            switch (mTarget?.m_CurrentMode ?? AiMode.None)
             {
                 case AiMode.Attack:
-                    baseAi?.ProcessAttack(); 
+                    mTarget?.ProcessAttack(); 
                     break;
                 case AiMode.Dead:
-                    baseAi.ProcessDead();
+                    mTarget.ProcessDead();
                     break;
                 case AiMode.Feeding:
-                    baseAi.ProcessFeeding();
+                    mTarget.ProcessFeeding();
                     break;
                 case AiMode.Flee:
-                    baseAi.ProcessFlee();
+                    mTarget.ProcessFlee();
                     break;
                 case AiMode.FollowWaypoints:
-                    baseAi.ProcessFollowWaypoints();
+                    mTarget.ProcessFollowWaypoints();
                     break;
                 case AiMode.HoldGround:
-                    baseAi.ProcessHoldGround();
+                    mTarget.ProcessHoldGround();
                     break;
                 case AiMode.Idle:
-                    baseAi.ProcessIdle();
+                    mTarget.ProcessIdle();
                     break;
                 case AiMode.Investigate:
-                    baseAi.ProcessInvestigate();
+                    mTarget.ProcessInvestigate();
                     break;
                 case AiMode.InvestigateFood:
-                    baseAi.ProcessInvestigateFood();
+                    mTarget.ProcessInvestigateFood();
                     break;
                 case AiMode.InvestigateSmell:
-                    baseAi.ProcessInvestigateSmell();
+                    mTarget.ProcessInvestigateSmell();
                     break;
                 case AiMode.Rooted:
-                    baseAi.ProcessRooted();
+                    mTarget.ProcessRooted();
                     break;
                 case AiMode.Sleep:
-                    baseAi.ProcessSleep();
+                    mTarget.ProcessSleep();
                     break;
                 case AiMode.Stalking:
-                    baseAi.ProcessStalking();
+                    mTarget.ProcessStalking();
                     break;
                 case AiMode.Struggle:
-                    baseAi.ProcessStruggle();
+                    mTarget.ProcessStruggle();
                     break;
                 case AiMode.Wander:
-                    baseAi.ProcessWander();
+                    mTarget.ProcessWander();
                     break;
                 case AiMode.WanderPaused:
-                    baseAi.ProcessWanderPaused();
+                    mTarget.ProcessWanderPaused();
                     break;
                 case AiMode.GoToPoint:
-                    baseAi.ProcessGoToPoint();
+                    mTarget.ProcessGoToPoint();
                     break;
                 case AiMode.InteractWithProp:
-                    baseAi.ProcessInteractWithProp();
+                    mTarget.ProcessInteractWithProp();
                     break;
                 case AiMode.ScriptedSequence:
-                    baseAi.ProcessScriptedSequence();
+                    mTarget.ProcessScriptedSequence();
                     break;
                 case AiMode.Stunned:
-                    baseAi.ProcessStunned();
+                    mTarget.ProcessStunned();
                     break;
                 case AiMode.ScratchingAntlers:
-                    baseAi.Moose?.ProcessScratchingAntlers();
+                    mTarget.Moose?.ProcessScratchingAntlers();
                     break;
                 case AiMode.PatrolPointsOfInterest:
-                    baseAi.ProcessPatrolPointsOfInterest();
+                    mTarget.ProcessPatrolPointsOfInterest();
                     break;
                 case AiMode.HideAndSeek:
-                    baseAi.Timberwolf?.ProcessHideAndSeek();
+                    mTarget.Timberwolf?.ProcessHideAndSeek();
                     break;
                 case AiMode.JoinPack:
-                    baseAi.Timberwolf?.ProcessJoinPack();
+                    mTarget.Timberwolf?.ProcessJoinPack();
                     break;
                 case AiMode.PassingAttack:
-                    baseAi.ProcessPassingAttack();
+                    mTarget.ProcessPassingAttack();
                     break;
                 case AiMode.Howl:
-                    baseAi.BaseWolf?.ProcessHowl();
+                    mTarget.BaseWolf?.ProcessHowl();
                     break;
                 case AiMode.Disabled:
                 case AiMode.None:
@@ -124,21 +124,21 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected virtual void PostProcess(BaseAi baseAi)
+        protected virtual void PostProcess()
         {
-            baseAi.ProcessCommonPost();
+            mTarget.ProcessCommonPost();
         }
 
 
-        public void ProcessCurrentAiMode(BaseAi baseAi)
+        public void ProcessCurrentAiMode()
         {
 #if DEV_BUILD
             try
             {
 #endif
-            PreProcess(baseAi);
-            Process(baseAi);
-            PostProcess(baseAi);
+            PreProcess();
+            Process();
+            PostProcess();
 #if DEV_BUILD
             }
             catch (Exception e)

@@ -56,7 +56,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
         }
 
-        /*
+        
         [HarmonyPatch(typeof(BaseAi), "ProcessCurrentAiMode")]
         internal class BaseAiPatches_ProcessCurrentAiMode
         {
@@ -87,7 +87,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
                         return true;
                     }
-                    if (!Instance.AugmentList.ContainsKey(__instance.GetHashCode()))
+                    if (!Manager.AiAugments.ContainsKey(__instance.GetHashCode()))
                     {
 #if DEV_BUILD_LOG_VERBOSE
                         Log(__instance, $" is not contained in augmented ai list with count {Instance.AugmentList.Count}, aborting BaseAi.ProcessCurrentAiMode.Prefix");
@@ -97,7 +97,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #if DEV_BUILD_LOG_VERBOSE
                     Log(__instance, " looks good, running custom ai logic and aborting existing call");
 #endif
-                    Instance.ProcessCurrentAiMode(__instance);
+                    Manager.ProcessCurrentAiMode(__instance);
                     return false;
 #if DEV_BUILD
                 }
@@ -109,7 +109,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
             }
         }
-        */
+        
 
         [HarmonyPatch(typeof(GameManager), "DoExitToMainMenu")]
         internal class GameManagerPatches_DoExitToMainMenu

@@ -11,7 +11,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
     {
         WolfTypes WolfType { get; }
         BaseAi Target { get; }
-        void ProcessCurrentAiMode(BaseAi baseAi);
+        void ProcessCurrentAiMode();
         void Augment();
         void UnAugment();
     }

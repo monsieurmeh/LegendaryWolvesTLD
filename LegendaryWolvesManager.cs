@@ -161,12 +161,18 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
                     mAiAugments.Add(baseAi.GetHashCode(), new ScaredyWolf(baseAi));
                     break;
-                case WolfTypes.BigWolf:
+                case WolfTypes.Wanderer:
 #if DEV_BUILD_LOG
-                    Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
+                    Log($"Spawning WanderingWolf at {baseAi.gameObject.transform.position}!");
 #endif
-                    mAiAugments.Add(baseAi.GetHashCode(), new BigWolf(baseAi));
+                    mAiAugments.Add(baseAi.GetHashCode(), new WanderingWolf(baseAi));
                     break;
+                //case WolfTypes.BigWolf:
+                //#if DEV_BUILD_LOG
+                //Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
+                //#endif
+                //mAiAugments.Add(baseAi.GetHashCode(), new BigWolf(baseAi));
+                //break;
                 default:
 #if DEV_BUILD_LOG
                     Log($"No handler for {newType}, aborting AugmentWolf...");
@@ -236,7 +242,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
                 if (mAiAugments.TryGetValue(baseAi.GetHashCode(), out ICustomWolfAI customWolfAi))
                 {
-                    customWolfAi.ProcessCurrentAiMode(baseAi);
+                    customWolfAi.ProcessCurrentAiMode();
                 }
 #if DEV_BUILD
             }

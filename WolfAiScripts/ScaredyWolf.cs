@@ -16,10 +16,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public ScaredyWolf(BaseAi target) : base(target) { }
 
-        protected override void Process(BaseAi baseAi)
+        protected override void Process()
         {
 
-            switch (baseAi?.m_CurrentMode ?? AiMode.None)
+            switch (mTarget?.m_CurrentMode ?? AiMode.None)
             {
                 case AiMode.Attack:
                 case AiMode.Flee:
@@ -28,10 +28,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #if DEV_BUILD_LOG
                         Log("Flee, scaredy wolf!");
 #endif
-                    baseAi.ProcessFlee();
+                    mTarget.ProcessFlee();
                     break;
                 default:
-                    base.Process(baseAi);
+                    base.Process();
                     break;
             }
         }
@@ -41,7 +41,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             if (mTarget.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
             {
-                renderer.sharedMaterial.color = Color.white;
+                renderer.material.color = Color.yellow;
             }
         }
     }

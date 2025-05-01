@@ -10,7 +10,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         BigWolf,
         //Stalker,
         //PackLeader,
-        //Wanderer,
+        Wanderer,
         COUNT
     }
 }
