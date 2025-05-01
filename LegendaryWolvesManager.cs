@@ -1,10 +1,5 @@
 ﻿using Il2Cpp;
-using Il2CppNodeCanvas.Tasks.Actions;
-using Il2CppTLD.AI;
-using System.Buffers.Text;
 using UnityEngine;
-using static Il2Cpp.UIRoot;
-using static MelonLoader.bHaptics;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -98,35 +93,30 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        public bool TryAugmentWolf(GameObject spawnablePrefab, float augmentValue)
+        public bool TryAugmentWolf(BaseAi baseAi, float augmentValue)
         {
             try
             {
-                if (!spawnablePrefab.TryGetComponent(out BaseAi baseAI))
-                {
-                    Log($"no base AI, aborting TryAugmentWolf");
-                    return false;
-                }
                 Vector3 newScale = new Vector3(1, 1, 1);
-                if (baseAI.m_AiType != AiType.Predator)
+                if (baseAi.m_AiType != AiType.Predator)
                 {
-                    Log($"Non-predator AI, aborting TryAugmentWolf");
-                    baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                    Log(baseAi, " is not a predator, aborting TryAugmentWolf");
+                    baseAi.gameObject.transform.set_localScale_Injected(ref newScale);
                     return false;
                 }
-                if (baseAI.m_AiSubType != AiSubType.Wolf)
+                if (baseAi.m_AiSubType != AiSubType.Wolf)
                 {
-                    Log($"Non-wolf AI, aborting TryAugmentWolf");
-                    baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                    Log(baseAi, " is not a wolf, aborting TryAugmentWolf");
+                    baseAi.gameObject.transform.set_localScale_Injected(ref newScale);
                     return false;
                 }
-                if (mAugmentedAiList.Contains(baseAI))
+                if (mAugmentedAiList.Contains(baseAi))
                 {
-                    Log($"Ai already in list, aborting TryAugmentWolf");
-                    baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+                    Log(baseAi, " is already in list, aborting TryAugmentWolf");
+                    baseAi.gameObject.transform.set_localScale_Injected(ref newScale);
                     return false;
                 }
-                AugmentWolf(baseAI, augmentValue);
+                AugmentWolf(baseAi, augmentValue);
                 return true;
             }
             catch (Exception e)
@@ -140,7 +130,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected void AugmentWolf(BaseAi baseAI, float augmentValue)
         {
             augmentValue = Mathf.Clamp(augmentValue, 1, 10);
-            Log($"Watch out, augmenting {baseAI.gameObject.name} ai!");// size/speed by factor of {augmentValue}!");
+            Log($"Watch out, augmenting {BaseAiInfo(baseAI)}!");// size/speed by factor of {augmentValue}!");
             mAugmentedAiList.Add(baseAI);
             //baseAI.m_RunSpeed *= augmentValue;
             //baseAI.m_StalkSpeed *= augmentValue;
@@ -163,10 +153,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 }
                 if (!mAugmentedAiList.Contains(baseAI))
                 {
-                    Log($"base AI not contained in list, aborting tryUnaugmentWolf");
+                    Log(baseAI, $" is not contained in list, aborting tryUnaugmentWolf");
                     return false;
                 }
-                Log($"Previously augmented AI found on {baseAI.gameObject.name}, un-augmenting...");
+                Log($"Previously augmented AI found on {BaseAiInfo(baseAI)}, un-augmenting...");
                 UnaugmentWolf(baseAI);
                 return true;
             }
@@ -191,9 +181,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public void ProcessCurrentAiMode(BaseAi baseAi)
         {
             baseAi.ProcessCommonPre();
+            Log($"Processing current ai mode {baseAi.m_CurrentMode} of {BaseAiInfo(baseAi)}...");
             switch (baseAi.m_CurrentMode)
             {
                 case AiMode.Attack:
+                    Log("Flee, scaredy wolf!");
                     baseAi.ProcessFlee(); //Scaredy wolf!
                     //baseAi.ProcessAttack();
                     break;
@@ -234,7 +226,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     baseAi.ProcessStalking();
                     break;
                 case AiMode.Struggle:
-                    baseAi.ProcessStruggle();
+                    Log("Flee, scaredy wolf!");
+                    baseAi.ProcessFlee(); //Scaredy wolf!
+                    //baseAi.ProcessStruggle();
                     break;
                 case AiMode.Wander:
                     baseAi.ProcessWander();
@@ -284,6 +278,30 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public void Log(string message)
         {
             mLogMessageAction.Invoke($"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}");
+        }
+
+
+        public void Log(GameObject go, string msg)
+        {
+            Log($"{GameObjectInfo(go)} {msg}");
+        }
+
+
+        public void Log(BaseAi baseAi, string msg)
+        {
+            Log($"{BaseAiInfo(baseAi)} {msg}");
+        }
+
+
+        public string GameObjectInfo(GameObject go)
+        {
+            return $"{go.name} [{go.GetHashCode()}]";
+        }
+
+
+        public string BaseAiInfo(BaseAi baseAi)
+        {
+            return $"{baseAi.gameObject.name} ({baseAi.GetType()}) [{baseAi.GetHashCode()}]";
         }
     }
 }
