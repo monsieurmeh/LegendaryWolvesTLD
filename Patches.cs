@@ -4,22 +4,14 @@
 
 using HarmonyLib;
 using Il2Cpp;
-using Il2CppTLD.AI;
-using System.Buffers.Text;
-using System.Runtime.InteropServices;
 using UnityEngine;
-using static MonsieurMeh.Mods.TLD.LegendaryWolves.LegendaryWolvesManager;
+using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
     internal class Patches
     {
-        private static void Log(string msg, bool error = false) => Instance.Log(msg, error);
-        private static void Log(BaseAi baseAi, string msg, bool error = false) => Instance.Log(baseAi, msg, error);
-        private static void LogError(string msg) => Log(msg, true);
-        private static void LogError(BaseAi baseAi, string msg) => Log(baseAi, msg, true);
-
 
         [HarmonyPatch(typeof(SpawnRegion), "InstantiateSpawnInternal", new Type[] { typeof(GameObject), typeof(WildlifeMode), typeof(Vector3), typeof(Quaternion) })]
         internal class SpawnRegionPatches_InstantiateSpawnInternal
@@ -30,7 +22,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 try
                 {
 #endif
-                    Instance.TryAugmentWolf(__result, new System.Random().Next(100, 500) * 0.01f);
+                    Manager.TryAugmentWolf(__result, new System.Random().Next(100, 500) * 0.01f);
 #if DEV_BUILD
                 }
                 catch (Exception e)
@@ -52,7 +44,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 try
                 {
 #endif
-                    Instance.TryUnaugmentWolf(__instance);
+                    Manager.TryUnaugmentWolf(__instance);
 #if DEV_BUILD
                 }
                 catch (Exception e)
@@ -128,7 +120,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 try
                 {
 #endif
-                    Instance.ClearAugments();
+                    Manager.ClearAugments();
 #if DEV_BUILD
                 }
                 catch (Exception e)
