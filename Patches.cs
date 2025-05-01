@@ -51,5 +51,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 return false;
             }
         }
+
+
+
     }
 }

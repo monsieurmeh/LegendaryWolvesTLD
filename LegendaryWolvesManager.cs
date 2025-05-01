@@ -77,18 +77,24 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return false;
             }
-            foreach (BaseAi baseAI in mAugmentedAiList)
-            {
-                TryUnaugmentWolf(baseAI);
-            }
-            mAugmentedAiList.Clear();
+            UnaugmentAll();
             mAugmentedAiList = null;
-            mAugmentDetails.Clear();
             mAugmentDetails = null;
             mInitialized = false;
             mSettings = null;
             mLogMessageAction = null;
             return true;
+        }
+
+
+        public void UnaugmentAll()
+        {
+            foreach (BaseAi baseAi in mAugmentedAiList)
+            {
+                TryUnaugmentWolf(baseAi);
+            }
+            mAugmentedAiList.Clear();
+            mAugmentDetails.Clear();
         }
 
 
@@ -188,7 +194,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             switch (baseAi.m_CurrentMode)
             {
                 case AiMode.Attack:
-                    baseAi.ProcessAttack();
+                    baseAi.ProcessFlee(); //Scaredy wolf!
+                    //baseAi.ProcessAttack();
                     break;
                 case AiMode.Dead:
                     baseAi.ProcessDead();
