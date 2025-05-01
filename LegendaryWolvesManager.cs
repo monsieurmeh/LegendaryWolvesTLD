@@ -64,8 +64,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mSettings = settings;
             mAugmentedAiList = new HashSet<BaseAi>();
             mAugmentDetails = new Dictionary<BaseAi, AugmentDetails>();
-            return true;
             mLogMessageAction = logMessageAction;
+            return true;
         }
 
 
@@ -315,7 +315,14 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public void Log(string message)
         {
-            mLogMessageAction.Invoke($"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}");
+            try
+            {
+                mLogMessageAction.Invoke($"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}");
+            }
+            catch (Exception e)
+            {
+                Debug.Log($"oh for christ's sake, even the log is erroring? Wtf: {e}");
+            }
         }
 
 
@@ -333,13 +340,27 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public static string GameObjectInfo(GameObject go)
         {
-            return $"{go?.name ?? Null} [{go?.GetHashCode()}]";
+            try
+            {
+                return $"{go?.name ?? Null} [{go?.GetHashCode()}]";
+            }
+            catch (Exception e)
+            {
+                return e.ToString();
+            }
         }
 
 
         public static string BaseAiInfo(BaseAi baseAi)
         {
-            return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}]";
+            try
+            {
+                return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}]";
+            }
+            catch (Exception e)
+            {
+                return e.ToString();
+            }
         }
     }
 }
