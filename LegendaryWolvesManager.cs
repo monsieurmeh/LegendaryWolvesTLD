@@ -3,6 +3,8 @@
 //#define DEV_BUILD_LOG_VERBOSE
 
 using Il2Cpp;
+using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.Injection;
 using UnityEngine;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
@@ -64,6 +66,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return false;
             }
+            ClassInjector.RegisterTypeInIl2Cpp<ScaredyWolf>();
             mInitialized = true;
             mStartTime = System.DateTime.Now.Ticks;
             mSettings = settings;
@@ -131,13 +134,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
                     return false;
                 }
-                Vector3 newScale = new Vector3(1, 1, 1);
                 if (baseAi.m_AiType != AiType.Predator)
                 {
 #if DEV_BUILD_LOG_VERBOSE
                     Log(baseAi, " is not a predator, aborting TryAugmentWolf");
 #endif
-                    baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
                     return false;
                 }
                 if (baseAi.m_AiSubType != AiSubType.Wolf)
@@ -145,7 +146,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #if DEV_BUILD_LOG_VERBOSE
                     Log(baseAi, " is not a wolf, aborting TryAugmentWolf");
 #endif
-                    baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
                     return false;
                 }
                 if (mAugmentList.ContainsKey(baseAi.GetHashCode()))
@@ -153,7 +153,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #if DEV_BUILD_LOG_VERBOSE
                     Log(baseAi, " is already in list, aborting TryAugmentWolf");
 #endif
-                    baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
                     return false;
                 }
                 AugmentWolf(baseAi, augmentValue);
@@ -175,6 +174,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #if DEV_BUILD_LOG_VERBOSE
             Log($"Watch out, augmenting {BaseAiInfo(baseAi)}!");// size/speed by factor of {augmentValue}!");
 #endif
+            ScaredyWolf scaredyWolf = baseAi.gameObject.AddComponent<ScaredyWolf>();
             mAugmentList.Add(baseAi.GetHashCode(), baseAi);
             //baseAi.m_RunSpeed *= augmentValue;
             //baseAi.m_StalkSpeed *= augmentValue;

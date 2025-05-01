@@ -64,7 +64,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
         }
 
-
+        /*
         [HarmonyPatch(typeof(BaseAi), "ProcessCurrentAiMode")]
         internal class BaseAiPatches_ProcessCurrentAiMode
         {
@@ -117,7 +117,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
             }
         }
-
+        */
 
         [HarmonyPatch(typeof(GameManager), "DoExitToMainMenu")]
         internal class GameManagerPatches_DoExitToMainMenu
