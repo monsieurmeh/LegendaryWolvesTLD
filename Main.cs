@@ -25,7 +25,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected bool Initialize()
         {
             mManager = LegendaryWolvesManager.Instance;
-            mManager.Initialize(new Settings(), (s) => LoggerInstance.Msg(s));
+            mManager.Initialize(new Settings(), (s) => LoggerInstance.Msg(s), (err) => LoggerInstance.Error(err));
             mInitialized = mManager != null;
             return mInitialized;
         }
@@ -35,6 +35,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             mInitialized = mManager.Shutdown();
             return !mInitialized;
+        }
+
+
+        public override void OnUpdate()
+        {
+            if (mInitialized)
+            {
+                mManager.Update();
+            }
         }
     }
 }

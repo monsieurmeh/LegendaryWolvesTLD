@@ -1,4 +1,6 @@
 ﻿#define DEV_BUILD
+#define DEV_BUILD_LOG
+//#define DEV_BUILD_LOG_VERBOSE
 
 using Il2Cpp;
 using UnityEngine;
@@ -9,8 +11,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
     {
         #region Consts & Enums
 
-        const float MillisecondsPerTick = 1 / 10000;
-        const float SecondsPerTick = MillisecondsPerTick / 1000;
+        const float MillisecondsPerTick = 0.0001f;
+        const float SecondsPerTick = MillisecondsPerTick * 0.001f;
+        const long TicksPerUpdate = 10000000;
         const string Null = "null";
 
         #endregion
@@ -40,20 +43,22 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 
         private Action<string> mLogMessageAction;
+        private Action<string> mLogErrorAction;
         private Settings mSettings;
         private bool mInitialized = false;
         private bool mEnabled = false;
         private long mStartTime = System.DateTime.Now.Ticks;
         private long mLastReadoutTime = System.DateTime.Now.Ticks;
 
-        private HashSet<BaseAi> mAugmentedAiList;
-        private Dictionary<BaseAi, AugmentDetails> mAugmentDetails;
+        private Dictionary<int, BaseAi> mAugmentList;
+        private Dictionary<int, AugmentDetails> mAugmentDetails;
 
         private long TicksSinceStart { get { return System.DateTime.Now.Ticks - mStartTime; } }
+        private long TicksSinceLastReadout { get { return System.DateTime.Now.Ticks - mLastReadoutTime; } }
 
-        public HashSet<BaseAi> AugmentedAiList { get { return mAugmentedAiList; } }
+        public Dictionary<int, BaseAi> AugmentList { get { return mAugmentList; } }
 
-        public bool Initialize(Settings settings, Action<string> logMessageAction)
+        public bool Initialize(Settings settings, Action<string> logMessageAction, Action<string> logErrorAction)
         {
             if (mInitialized)
             {
@@ -62,9 +67,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mInitialized = true;
             mStartTime = System.DateTime.Now.Ticks;
             mSettings = settings;
-            mAugmentedAiList = new HashSet<BaseAi>();
-            mAugmentDetails = new Dictionary<BaseAi, AugmentDetails>();
+            mAugmentList = new Dictionary<int, BaseAi>();
+            mAugmentDetails = new Dictionary<int, AugmentDetails>();
             mLogMessageAction = logMessageAction;
+            mLogErrorAction = logErrorAction;
             return true;
         }
 
@@ -76,33 +82,51 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 return false;
             }
             ClearAugments();
-            mAugmentedAiList = null;
+            mAugmentList = null;
             mAugmentDetails = null;
             mInitialized = false;
             mSettings = null;
             mLogMessageAction = null;
+            mLogErrorAction = null;
             return true;
+        }
+
+
+        public void Update()
+        {
+            if (TicksSinceLastReadout >= TicksPerUpdate)
+            {
+                mLastReadoutTime = System.DateTime.Now.Ticks;
+                foreach (BaseAi baseAi in mAugmentList.Values)
+                {
+#if DEV_BUILD_LOG_VERBOSE
+                    Log(baseAi, " is in augment list");
+#endif
+                }
+            }
         }
 
 
         public void ClearAugments()
         {
-            foreach (BaseAi baseAi in mAugmentedAiList)
+            foreach (BaseAi baseAi in mAugmentList.Values)
             {
                 TryUnaugmentWolf(baseAi);
             }
-            mAugmentedAiList.Clear();
+            mAugmentList.Clear();
             mAugmentDetails.Clear();
         }
 
 
         public bool TryAugmentWolf(BaseAi baseAi, float augmentValue)
         {
+#if DEV_BUILD
             try
             {
+#endif
                 if (baseAi == null)
                 {
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                     Log("null BaseAi, aborting TryAugmentWolf");
 #endif
                     return false;
@@ -110,7 +134,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 Vector3 newScale = new Vector3(1, 1, 1);
                 if (baseAi.m_AiType != AiType.Predator)
                 {
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                     Log(baseAi, " is not a predator, aborting TryAugmentWolf");
 #endif
                     baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
@@ -118,15 +142,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 }
                 if (baseAi.m_AiSubType != AiSubType.Wolf)
                 {
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                     Log(baseAi, " is not a wolf, aborting TryAugmentWolf");
 #endif
                     baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
                     return false;
                 }
-                if (mAugmentedAiList.Contains(baseAi))
+                if (mAugmentList.ContainsKey(baseAi.GetHashCode()))
                 {
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                     Log(baseAi, " is already in list, aborting TryAugmentWolf");
 #endif
                     baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
@@ -134,68 +158,74 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 }
                 AugmentWolf(baseAi, augmentValue);
                 return true;
+ #if DEV_BUILD           
             }
             catch (Exception e)
             {
-                Log($"Error while trying to augment wolf ai: {e}");
+                LogError($"Error while trying to augment wolf ai: {e}");
                 return false;
             }
+#endif
         }
 
         
-        private void AugmentWolf(BaseAi baseAI, float augmentValue)
+        private void AugmentWolf(BaseAi baseAi, float augmentValue)
         {
             augmentValue = Mathf.Clamp(augmentValue, 1, 10);
-#if DEV_BUILD
-            Log($"Watch out, augmenting {BaseAiInfo(baseAI)}!");// size/speed by factor of {augmentValue}!");
+#if DEV_BUILD_LOG_VERBOSE
+            Log($"Watch out, augmenting {BaseAiInfo(baseAi)}!");// size/speed by factor of {augmentValue}!");
 #endif
-            mAugmentedAiList.Add(baseAI);
-            //baseAI.m_RunSpeed *= augmentValue;
-            //baseAI.m_StalkSpeed *= augmentValue;
-            //baseAI.m_WalkSpeed *= augmentValue;
-            //baseAI.m_turnSpeed *= augmentValue;
-            //baseAI.m_TurnSpeedDegreesPerSecond *= augmentValue;
+            mAugmentList.Add(baseAi.GetHashCode(), baseAi);
+            //baseAi.m_RunSpeed *= augmentValue;
+            //baseAi.m_StalkSpeed *= augmentValue;
+            //baseAi.m_WalkSpeed *= augmentValue;
+            //baseAi.m_turnSpeed *= augmentValue;
+            //baseAi.m_TurnSpeedDegreesPerSecond *= augmentValue;
             //Vector3 newScale = new Vector3(augmentValue, augmentValue, augmentValue);
-            //baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
+            //baseAi.gameObject.transform.set_localScale_Injected(ref newScale);
         }
 
 
         public bool TryUnaugmentWolf(BaseAi baseAI)
         {
+#if DEV_BUILD
             try
             {
+#endif
                 if (baseAI == null)
                 {
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                     Log($"Null base Ai, aborting TryUnaugmentWolf");
 #endif
                     return false;
                 }
-                if (!mAugmentedAiList.Contains(baseAI))
+                if (!mAugmentList.ContainsKey(baseAI.GetHashCode()))
                 {
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                     Log(baseAI, $" is not contained in list, aborting tryUnaugmentWolf");
 #endif
                     return false;
                 }
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                 Log($"Previously augmented AI found on {BaseAiInfo(baseAI)}, un-augmenting...");
 #endif
                 UnaugmentWolf(baseAI);
                 return true;
+#if DEV_BUILD
             }
             catch (Exception e)
             {
-                Log($"Error while trying to augment wolf ai: {e}");
+                LogError($"Error while trying to augment wolf ai: {e}");
                 return false;
             }
+#endif
         }
-    
+
 
 
         private void UnaugmentWolf(BaseAi baseAI)
         {
-            mAugmentedAiList.Remove(baseAI);
+            mAugmentList.Remove(baseAI.GetHashCode());
             //Vector3 newScale = new Vector3(1, 1, 1);
             //baseAI.gameObject.transform.set_localScale_Injected(ref newScale);
         }
@@ -204,16 +234,18 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         //Only familiar with pre/post fixes right now, might not have to replicate all of this with another patch methodology?
         public void ProcessCurrentAiMode(BaseAi baseAi)
         {
+#if DEV_BUILD
             try
             {
+#endif
                 baseAi.ProcessCommonPre();
-#if DEV_BUILD
+#if DEV_BUILD_LOG_VERBOSE
                 Log($"Processing current ai mode {baseAi.m_CurrentMode} of {BaseAiInfo(baseAi)}...");
 #endif
                 switch (baseAi?.m_CurrentMode ?? AiMode.None)
                 {
                     case AiMode.Attack:
-#if DEV_BUILD
+#if DEV_BUILD_LOG
                         Log("Flee, scaredy wolf!");
 #endif
                         baseAi?.ProcessFlee(); //Scaredy wolf!
@@ -256,7 +288,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                         baseAi.ProcessStalking();
                         break;
                     case AiMode.Struggle:
-#if DEV_BUILD
+#if DEV_BUILD_LOG
                         Log("Flee, scaredy wolf!");
 #endif
                         baseAi.ProcessFlee(); //Scaredy wolf!
@@ -304,63 +336,52 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                         break;
                 }
                 baseAi.ProcessCommonPost();
+#if DEV_BUILD
             }
             catch (Exception e)
             {
-                Log($"Error while trying to process wolf ai: {e}");
+                LogError($"Error while trying to process wolf ai: {e}");
                 return;
             }
+#endif
         }
 
 
-        public void Log(string message)
+        public void Log(string message, bool error = false)
         {
-            try
+            string logMessage = $"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}";
+            if (error)
             {
-                mLogMessageAction.Invoke($"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}");
+                mLogErrorAction.Invoke(logMessage);
             }
-            catch (Exception e)
+            else
             {
-                Debug.Log($"oh for christ's sake, even the log is erroring? Wtf: {e}");
+                mLogMessageAction.Invoke(logMessage);
             }
         }
 
-
-        public void Log(GameObject go, string msg)
+        
+        public void LogError(string message)
         {
-            Log($"{GameObjectInfo(go)} {msg}");
+            Log(message, true);
         }
 
 
-        public void Log(BaseAi baseAi, string msg)
+        public void Log(BaseAi baseAi, string msg, bool error = false)
         {
-            Log($"{BaseAiInfo(baseAi)} {msg}");
+            Log($"{BaseAiInfo(baseAi)} {msg}", error);
         }
 
 
-        public static string GameObjectInfo(GameObject go)
+        public void LogError(BaseAi baseAi, string msg)
         {
-            try
-            {
-                return $"{go?.name ?? Null} [{go?.GetHashCode()}]";
-            }
-            catch (Exception e)
-            {
-                return e.ToString();
-            }
+            Log(baseAi, msg, true);
         }
 
 
         public static string BaseAiInfo(BaseAi baseAi)
         {
-            try
-            {
-                return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}]";
-            }
-            catch (Exception e)
-            {
-                return e.ToString();
-            }
+            return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}] at {baseAi?.gameObject?.transform?.position ?? Vector3.zero}";
         }
     }
 }
