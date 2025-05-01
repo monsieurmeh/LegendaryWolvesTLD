@@ -1,4 +1,6 @@
-﻿using Il2Cpp;
+﻿#define DEV_BUILD
+
+using Il2Cpp;
 using UnityEngine;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
@@ -9,6 +11,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         const float MillisecondsPerTick = 1 / 10000;
         const float SecondsPerTick = MillisecondsPerTick / 1000;
+        const string Null = "null";
 
         #endregion
 
@@ -59,10 +62,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mInitialized = true;
             mStartTime = System.DateTime.Now.Ticks;
             mSettings = settings;
-            mLogMessageAction = logMessageAction;
             mAugmentedAiList = new HashSet<BaseAi>();
             mAugmentDetails = new Dictionary<BaseAi, AugmentDetails>();
             return true;
+            mLogMessageAction = logMessageAction;
         }
 
 
@@ -72,7 +75,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return false;
             }
-            UnaugmentAll();
+            ClearAugments();
             mAugmentedAiList = null;
             mAugmentDetails = null;
             mInitialized = false;
@@ -82,7 +85,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        public void UnaugmentAll()
+        public void ClearAugments()
         {
             foreach (BaseAi baseAi in mAugmentedAiList)
             {
@@ -97,23 +100,36 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             try
             {
+                if (baseAi == null)
+                {
+#if DEV_BUILD
+                    Log("null BaseAi, aborting TryAugmentWolf");
+#endif
+                    return false;
+                }
                 Vector3 newScale = new Vector3(1, 1, 1);
                 if (baseAi.m_AiType != AiType.Predator)
                 {
+#if DEV_BUILD
                     Log(baseAi, " is not a predator, aborting TryAugmentWolf");
-                    baseAi.gameObject.transform.set_localScale_Injected(ref newScale);
+#endif
+                    baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
                     return false;
                 }
                 if (baseAi.m_AiSubType != AiSubType.Wolf)
                 {
+#if DEV_BUILD
                     Log(baseAi, " is not a wolf, aborting TryAugmentWolf");
-                    baseAi.gameObject.transform.set_localScale_Injected(ref newScale);
+#endif
+                    baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
                     return false;
                 }
                 if (mAugmentedAiList.Contains(baseAi))
                 {
+#if DEV_BUILD
                     Log(baseAi, " is already in list, aborting TryAugmentWolf");
-                    baseAi.gameObject.transform.set_localScale_Injected(ref newScale);
+#endif
+                    baseAi.gameObject?.transform?.set_localScale_Injected(ref newScale);
                     return false;
                 }
                 AugmentWolf(baseAi, augmentValue);
@@ -127,10 +143,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
         
-        protected void AugmentWolf(BaseAi baseAI, float augmentValue)
+        private void AugmentWolf(BaseAi baseAI, float augmentValue)
         {
             augmentValue = Mathf.Clamp(augmentValue, 1, 10);
+#if DEV_BUILD
             Log($"Watch out, augmenting {BaseAiInfo(baseAI)}!");// size/speed by factor of {augmentValue}!");
+#endif
             mAugmentedAiList.Add(baseAI);
             //baseAI.m_RunSpeed *= augmentValue;
             //baseAI.m_StalkSpeed *= augmentValue;
@@ -148,15 +166,21 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 if (baseAI == null)
                 {
+#if DEV_BUILD
                     Log($"Null base Ai, aborting TryUnaugmentWolf");
+#endif
                     return false;
                 }
                 if (!mAugmentedAiList.Contains(baseAI))
                 {
+#if DEV_BUILD
                     Log(baseAI, $" is not contained in list, aborting tryUnaugmentWolf");
+#endif
                     return false;
                 }
+#if DEV_BUILD
                 Log($"Previously augmented AI found on {BaseAiInfo(baseAI)}, un-augmenting...");
+#endif
                 UnaugmentWolf(baseAI);
                 return true;
             }
@@ -169,7 +193,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
     
 
 
-        protected void UnaugmentWolf(BaseAi baseAI)
+        private void UnaugmentWolf(BaseAi baseAI)
         {
             mAugmentedAiList.Remove(baseAI);
             //Vector3 newScale = new Vector3(1, 1, 1);
@@ -180,98 +204,112 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         //Only familiar with pre/post fixes right now, might not have to replicate all of this with another patch methodology?
         public void ProcessCurrentAiMode(BaseAi baseAi)
         {
-            baseAi.ProcessCommonPre();
-            Log($"Processing current ai mode {baseAi.m_CurrentMode} of {BaseAiInfo(baseAi)}...");
-            switch (baseAi.m_CurrentMode)
+            try
             {
-                case AiMode.Attack:
-                    Log("Flee, scaredy wolf!");
-                    baseAi.ProcessFlee(); //Scaredy wolf!
-                    //baseAi.ProcessAttack();
-                    break;
-                case AiMode.Dead:
-                    baseAi.ProcessDead();
-                    break;
-                case AiMode.Feeding:
-                    baseAi.ProcessFeeding();
-                    break;
-                case AiMode.Flee:
-                    baseAi.ProcessFlee();
-                    break;
-                case AiMode.FollowWaypoints:
-                    baseAi.ProcessFollowWaypoints();
-                    break;
-                case AiMode.HoldGround:
-                    baseAi.ProcessHoldGround();
-                    break;
-                case AiMode.Idle:
-                    baseAi.ProcessIdle();
-                    break;
-                case AiMode.Investigate:
-                    baseAi.ProcessInvestigate();
-                    break;
-                case AiMode.InvestigateFood:
-                    baseAi.ProcessInvestigateFood();
-                    break;
-                case AiMode.InvestigateSmell:
-                    baseAi.ProcessInvestigateSmell();
-                    break;
-                case AiMode.Rooted:
-                    baseAi.ProcessRooted();
-                    break;
-                case AiMode.Sleep:
-                    baseAi.ProcessSleep();
-                    break;
-                case AiMode.Stalking:
-                    baseAi.ProcessStalking();
-                    break;
-                case AiMode.Struggle:
-                    Log("Flee, scaredy wolf!");
-                    baseAi.ProcessFlee(); //Scaredy wolf!
-                    //baseAi.ProcessStruggle();
-                    break;
-                case AiMode.Wander:
-                    baseAi.ProcessWander();
-                    break;
-                case AiMode.WanderPaused:
-                    baseAi.ProcessWanderPaused();
-                    break;
-                case AiMode.GoToPoint:
-                    baseAi.ProcessGoToPoint();
-                    break;
-                case AiMode.InteractWithProp:
-                    baseAi.ProcessInteractWithProp();
-                    break;
-                case AiMode.ScriptedSequence:
-                    baseAi.ProcessScriptedSequence();
-                    break;
-                case AiMode.Stunned:
-                    baseAi.ProcessStunned();
-                    break;
-                case AiMode.ScratchingAntlers:
-                    baseAi.Moose?.ProcessScratchingAntlers();
-                    break;
-                case AiMode.PatrolPointsOfInterest:
-                    baseAi.ProcessPatrolPointsOfInterest();
-                    break;
-                case AiMode.HideAndSeek:
-                    baseAi.Timberwolf?.ProcessHideAndSeek();
-                    break;
-                case AiMode.JoinPack:
-                    baseAi.Timberwolf?.ProcessJoinPack();
-                    break;
-                case AiMode.PassingAttack:
-                    baseAi.ProcessPassingAttack();
-                    break;
-                case AiMode.Howl:
-                    baseAi.BaseWolf?.ProcessHowl();
-                    break;
-                case AiMode.Disabled:
-                case AiMode.None:
-                default:
-                    break;
+                baseAi.ProcessCommonPre();
+#if DEV_BUILD
+                Log($"Processing current ai mode {baseAi.m_CurrentMode} of {BaseAiInfo(baseAi)}...");
+#endif
+                switch (baseAi?.m_CurrentMode ?? AiMode.None)
+                {
+                    case AiMode.Attack:
+#if DEV_BUILD
+                        Log("Flee, scaredy wolf!");
+#endif
+                        baseAi?.ProcessFlee(); //Scaredy wolf!
+                                              //baseAi.ProcessAttack();
+                        break;
+                    case AiMode.Dead:
+                        baseAi.ProcessDead();
+                        break;
+                    case AiMode.Feeding:
+                        baseAi.ProcessFeeding();
+                        break;
+                    case AiMode.Flee:
+                        baseAi.ProcessFlee();
+                        break;
+                    case AiMode.FollowWaypoints:
+                        baseAi.ProcessFollowWaypoints();
+                        break;
+                    case AiMode.HoldGround:
+                        baseAi.ProcessHoldGround();
+                        break;
+                    case AiMode.Idle:
+                        baseAi.ProcessIdle();
+                        break;
+                    case AiMode.Investigate:
+                        baseAi.ProcessInvestigate();
+                        break;
+                    case AiMode.InvestigateFood:
+                        baseAi.ProcessInvestigateFood();
+                        break;
+                    case AiMode.InvestigateSmell:
+                        baseAi.ProcessInvestigateSmell();
+                        break;
+                    case AiMode.Rooted:
+                        baseAi.ProcessRooted();
+                        break;
+                    case AiMode.Sleep:
+                        baseAi.ProcessSleep();
+                        break;
+                    case AiMode.Stalking:
+                        baseAi.ProcessStalking();
+                        break;
+                    case AiMode.Struggle:
+#if DEV_BUILD
+                        Log("Flee, scaredy wolf!");
+#endif
+                        baseAi.ProcessFlee(); //Scaredy wolf!
+                                              //baseAi.ProcessStruggle();
+                        break;
+                    case AiMode.Wander:
+                        baseAi.ProcessWander();
+                        break;
+                    case AiMode.WanderPaused:
+                        baseAi.ProcessWanderPaused();
+                        break;
+                    case AiMode.GoToPoint:
+                        baseAi.ProcessGoToPoint();
+                        break;
+                    case AiMode.InteractWithProp:
+                        baseAi.ProcessInteractWithProp();
+                        break;
+                    case AiMode.ScriptedSequence:
+                        baseAi.ProcessScriptedSequence();
+                        break;
+                    case AiMode.Stunned:
+                        baseAi.ProcessStunned();
+                        break;
+                    case AiMode.ScratchingAntlers:
+                        baseAi.Moose?.ProcessScratchingAntlers();
+                        break;
+                    case AiMode.PatrolPointsOfInterest:
+                        baseAi.ProcessPatrolPointsOfInterest();
+                        break;
+                    case AiMode.HideAndSeek:
+                        baseAi.Timberwolf?.ProcessHideAndSeek();
+                        break;
+                    case AiMode.JoinPack:
+                        baseAi.Timberwolf?.ProcessJoinPack();
+                        break;
+                    case AiMode.PassingAttack:
+                        baseAi.ProcessPassingAttack();
+                        break;
+                    case AiMode.Howl:
+                        baseAi.BaseWolf?.ProcessHowl();
+                        break;
+                    case AiMode.Disabled:
+                    case AiMode.None:
+                    default:
+                        break;
+                }
+                baseAi.ProcessCommonPost();
             }
-            baseAi.ProcessCommonPost();
+            catch (Exception e)
+            {
+                Log($"Error while trying to process wolf ai: {e}");
+                return;
+            }
         }
 
 
@@ -293,15 +331,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        public string GameObjectInfo(GameObject go)
+        public static string GameObjectInfo(GameObject go)
         {
-            return $"{go.name} [{go.GetHashCode()}]";
+            return $"{go?.name ?? Null} [{go?.GetHashCode()}]";
         }
 
 
-        public string BaseAiInfo(BaseAi baseAi)
+        public static string BaseAiInfo(BaseAi baseAi)
         {
-            return $"{baseAi.gameObject.name} ({baseAi.GetType()}) [{baseAi.GetHashCode()}]";
+            return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}]";
         }
     }
 }
