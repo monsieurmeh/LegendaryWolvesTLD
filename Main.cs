@@ -1,5 +1,7 @@
 ﻿using Il2Cpp;
+using Il2CppSuperSplines;
 using MelonLoader;
+using UnityEngine;
 
 
 [assembly: MelonInfo(typeof(MonsieurMeh.Mods.TLD.LegendaryWolves.Main), "LegendaryWolves", "0.0.12", "MonsieurMeh", null)]
@@ -28,6 +30,13 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mManager = LegendaryWolvesManager.Instance;
             mManager.Initialize(new Settings(), (s) => LoggerInstance.Msg(s), (err) => LoggerInstance.Error(err));
             mInitialized = mManager != null;
+            if (mInitialized)
+            {
+                AuroraField auroraField = new AuroraField();
+                object obj = (object)auroraField;
+                SplineNode node = (SplineNode)obj;
+                Transform transform = node.Transform;
+            }
             return mInitialized;
         }
 
