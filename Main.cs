@@ -1,4 +1,5 @@
-﻿using MelonLoader;
+﻿using Il2Cpp;
+using MelonLoader;
 
 
 [assembly: MelonInfo(typeof(MonsieurMeh.Mods.TLD.LegendaryWolves.Main), "LegendaryWolves", "0.0.12", "MonsieurMeh", null)]

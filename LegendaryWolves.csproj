@@ -47,6 +47,7 @@
     <Reference Include="Il2CppSystem.Configuration" />
     <Reference Include="Il2CppSystem" />
     <Reference Include="Il2CppSystem.Runtime.Serialization" />
+    <Reference Include="Il2CppAK.Wwise.Unity.API.WwiseTypes" />
     <Reference Include="Il2CppTLD.Addressables" />
     <Reference Include="Il2CppTLD.Encryption" />
     <Reference Include="Il2CppTLD.Game.Events.Runtime" />
@@ -61,6 +62,7 @@
     <Reference Include="Il2CppTLD.SaveState" />
     <Reference Include="Il2CppTLD.Serialization" />
     <Reference Include="Il2CppTLD.Stats" />
+    <Reference Include="Il2CppSuperSplines.Core" />
     <Reference Include="Il2CppTLD.TimeLib" />
     <Reference Include="Il2CppTLD.Trial" />
     <Reference Include="Il2CppTLD.UserGeneratedContent" />

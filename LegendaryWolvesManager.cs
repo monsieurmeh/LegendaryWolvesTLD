@@ -302,5 +302,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public static void Log(BaseAi baseAi, string msg, bool error = false) => LegendaryWolvesManager.Instance.Log(baseAi, msg, error);
         public static void LogError(string msg) => Log(msg, true);
         public static void LogError(BaseAi baseAi, string msg) => Log(baseAi, msg, true);
+
     }
 }
