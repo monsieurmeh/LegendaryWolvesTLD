@@ -14,14 +14,14 @@ using ModSettings;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
-    public abstract class BaseWolf : ICustomWolfAI
+    public class BaseWolf : ICustomWolfAI
     {
         #region Internals
 
         protected BaseAi mBaseAi;
         public BaseAi BaseAi { get { return mBaseAi; } }
 
-        public abstract WolfTypes WolfType { get; }
+        public virtual WolfTypes WolfType { get { return WolfTypes.Default; } }
 
         public BaseWolf(BaseAi baseAi)
         {
@@ -74,7 +74,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
             {
                 case AiMode.Attack:
-                    mBaseAi?.ProcessAttack();
+                    ProcessAttack();
                     break;
                 case AiMode.Dead:
                     mBaseAi.ProcessDead();

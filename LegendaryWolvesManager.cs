@@ -152,21 +152,27 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         
         private void AugmentWolf(BaseAi baseAi, float augmentValue)
         {
-            WolfTypes newType = (WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
+            WolfTypes newType = WolfTypes.Default;//(WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
             switch (newType)
             {
+                case WolfTypes.Default:
+#if DEV_BUILD_LOG
+                    Log($"Spawning BaseWolf at {baseAi.gameObject.transform.position}!");
+    #endif
+                    mAiAugments.Add(baseAi.GetHashCode(), new BaseWolf(baseAi));
+                    break;
                 //case WolfTypes.ScaredyWolf:
 #if DEV_BUILD_LOG
-               // Log($"Spawning ScaredyWolf at {baseAi.gameObject.transform.position}!");
+                // Log($"Spawning ScaredyWolf at {baseAi.gameObject.transform.position}!");
 #endif
-                    //mAiAugments.Add(baseAi.GetHashCode(), new ScaredyWolf(baseAi));
-                    //break;
-               // case WolfTypes.Wanderer:
+                //mAiAugments.Add(baseAi.GetHashCode(), new ScaredyWolf(baseAi));
+                //break;
+                // case WolfTypes.Wanderer:
 #if DEV_BUILD_LOG
-                   // Log($"Spawning WanderingWolf at {baseAi.gameObject.transform.position}!");
+                // Log($"Spawning WanderingWolf at {baseAi.gameObject.transform.position}!");
 #endif
-                   // mAiAugments.Add(baseAi.GetHashCode(), new WanderingWolf(baseAi));
-                    //break;
+                // mAiAugments.Add(baseAi.GetHashCode(), new WanderingWolf(baseAi));
+                //break;
                 //case WolfTypes.BigWolf:
                 //#if DEV_BUILD_LOG
                 //Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
