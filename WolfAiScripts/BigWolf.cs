@@ -21,13 +21,13 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected override void Process()
         {
-            switch (mTarget?.m_CurrentMode ?? AiMode.None)
+            switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
             {
                 case AiMode.Idle:
-                    mTarget.ProcessIdle();
+                    mBaseAi.ProcessIdle();
                     //spin like your life depends on it mf
                     mCurrentRotation *= Quaternion.Euler(Vector3.up * 5);
-                    mTarget.gameObject?.transform?.set_localRotation_Injected(ref mCurrentRotation);
+                    mBaseAi.gameObject?.transform?.set_localRotation_Injected(ref mCurrentRotation);
                     break;
                 default:
                     base.Process();
@@ -38,7 +38,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public override void Augment()
         {
-            if (mTarget.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
+            if (mBaseAi.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
             {
                 renderer.sharedMaterial.color = Color.red;
             }
@@ -46,20 +46,20 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 mAugmentFactor = new System.Random().Next(500, 1000) * 0.01f;
             }
-            mTarget.m_RunSpeed *= mAugmentFactor;
-            mTarget.m_StalkSpeed *= mAugmentFactor;
-            mTarget.m_WalkSpeed *= mAugmentFactor;
-            mTarget.m_turnSpeed *= mAugmentFactor;
-            mTarget.m_TurnSpeedDegreesPerSecond *= mAugmentFactor;
+            mBaseAi.m_RunSpeed *= mAugmentFactor;
+            mBaseAi.m_StalkSpeed *= mAugmentFactor;
+            mBaseAi.m_WalkSpeed *= mAugmentFactor;
+            mBaseAi.m_turnSpeed *= mAugmentFactor;
+            mBaseAi.m_TurnSpeedDegreesPerSecond *= mAugmentFactor;
             Vector3 newScale = new Vector3(mAugmentFactor, mAugmentFactor, mAugmentFactor);
-            mTarget.gameObject.transform.set_localScale_Injected(ref newScale);
+            mBaseAi.gameObject.transform.set_localScale_Injected(ref newScale);
         }
 
 
         public override void UnAugment()
         {
             Vector3 one = Vector3.one;
-            mTarget?.gameObject?.transform?.set_localScale_Injected(ref one);
+            mBaseAi?.gameObject?.transform?.set_localScale_Injected(ref one);
         }
     }
 }

@@ -10,7 +10,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
     public interface ICustomWolfAI
     {
         WolfTypes WolfType { get; }
-        BaseAi Target { get; }
+        BaseAi BaseAi { get; }
         void ProcessCurrentAiMode();
         void Augment();
         void UnAugment();

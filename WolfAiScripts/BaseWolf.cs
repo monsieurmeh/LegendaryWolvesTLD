@@ -7,19 +7,21 @@ using Il2CppTLD.AI;
 using UnityEngine;
 using static Il2Cpp.BaseAi;
 using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
+using static UnityEngine.GraphicsBuffer;
+using System.Reflection;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
     public abstract class BaseWolf : ICustomWolfAI
     {
-        protected BaseAi mTarget;
-        public BaseAi Target { get { return mTarget; } }
+        protected BaseAi mBaseAi;
+        public BaseAi BaseAi { get { return mBaseAi; } }
 
         public abstract WolfTypes WolfType { get; }
 
-        public BaseWolf(BaseAi target)
+        public BaseWolf(BaseAi baseAi)
         {
-            mTarget = target;
+            mBaseAi = baseAi;
         }
 
 
@@ -50,91 +52,91 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void PreProcess()
         {
-            mTarget.ProcessCommonPre();
+            mBaseAi.ProcessCommonPre();
         }
 
 
         protected virtual void Process()
         {
-            switch (mTarget?.m_CurrentMode ?? AiMode.None)
+            switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
             {
                 case AiMode.Attack:
-                    mTarget?.ProcessAttack();
+                    mBaseAi?.ProcessAttack();
                     break;
                 case AiMode.Dead:
-                    mTarget.ProcessDead();
+                    mBaseAi.ProcessDead();
                     break;
                 case AiMode.Feeding:
-                    mTarget.ProcessFeeding();
+                    mBaseAi.ProcessFeeding();
                     break;
                 case AiMode.Flee:
-                    mTarget.ProcessFlee();
+                    mBaseAi.ProcessFlee();
                     break;
                 case AiMode.FollowWaypoints:
-                    mTarget.ProcessFollowWaypoints();
+                    mBaseAi.ProcessFollowWaypoints();
                     break;
                 case AiMode.HoldGround:
-                    mTarget.ProcessHoldGround();
+                    mBaseAi.ProcessHoldGround();
                     break;
                 case AiMode.Idle:
-                    mTarget.ProcessIdle();
+                    mBaseAi.ProcessIdle();
                     break;
                 case AiMode.Investigate:
-                    mTarget.ProcessInvestigate();
+                    mBaseAi.ProcessInvestigate();
                     break;
                 case AiMode.InvestigateFood:
-                    mTarget.ProcessInvestigateFood();
+                    mBaseAi.ProcessInvestigateFood();
                     break;
                 case AiMode.InvestigateSmell:
-                    mTarget.ProcessInvestigateSmell();
+                    mBaseAi.ProcessInvestigateSmell();
                     break;
                 case AiMode.Rooted:
-                    mTarget.ProcessRooted();
+                    mBaseAi.ProcessRooted();
                     break;
                 case AiMode.Sleep:
-                    mTarget.ProcessSleep();
+                    mBaseAi.ProcessSleep();
                     break;
                 case AiMode.Stalking:
-                    mTarget.ProcessStalking();
+                    mBaseAi.ProcessStalking();
                     break;
                 case AiMode.Struggle:
-                    mTarget.ProcessStruggle();
+                    mBaseAi.ProcessStruggle();
                     break;
                 case AiMode.Wander:
-                    mTarget.ProcessWander();
+                    mBaseAi.ProcessWander();
                     break;
                 case AiMode.WanderPaused:
-                    mTarget.ProcessWanderPaused();
+                    mBaseAi.ProcessWanderPaused();
                     break;
                 case AiMode.GoToPoint:
-                    mTarget.ProcessGoToPoint();
+                    mBaseAi.ProcessGoToPoint();
                     break;
                 case AiMode.InteractWithProp:
-                    mTarget.ProcessInteractWithProp();
+                    mBaseAi.ProcessInteractWithProp();
                     break;
                 case AiMode.ScriptedSequence:
-                    mTarget.ProcessScriptedSequence();
+                    mBaseAi.ProcessScriptedSequence();
                     break;
                 case AiMode.Stunned:
-                    mTarget.ProcessStunned();
+                    mBaseAi.ProcessStunned();
                     break;
                 case AiMode.ScratchingAntlers:
-                    mTarget.Moose?.ProcessScratchingAntlers();
+                    mBaseAi.Moose?.ProcessScratchingAntlers();
                     break;
                 case AiMode.PatrolPointsOfInterest:
-                    mTarget.ProcessPatrolPointsOfInterest();
+                    mBaseAi.ProcessPatrolPointsOfInterest();
                     break;
                 case AiMode.HideAndSeek:
-                    mTarget.Timberwolf?.ProcessHideAndSeek();
+                    mBaseAi.Timberwolf?.ProcessHideAndSeek();
                     break;
                 case AiMode.JoinPack:
-                    mTarget.Timberwolf?.ProcessJoinPack();
+                    mBaseAi.Timberwolf?.ProcessJoinPack();
                     break;
                 case AiMode.PassingAttack:
-                    mTarget.ProcessPassingAttack();
+                    mBaseAi.ProcessPassingAttack();
                     break;
                 case AiMode.Howl:
-                    mTarget.BaseWolf?.ProcessHowl();
+                    mBaseAi.BaseWolf?.ProcessHowl();
                     break;
                 case AiMode.Disabled:
                 case AiMode.None:
@@ -146,7 +148,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void PostProcess()
         {
-            mTarget.ProcessCommonPost();
+            mBaseAi.ProcessCommonPost();
         }
 
 
@@ -154,20 +156,20 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ClearTargetAndSetDefaultAiMode()
         {
-            mTarget.ClearTarget();
+            mBaseAi.ClearTarget();
             SetDefaultAiMode();
             return;
         }
 
         protected virtual void SetAiMode(AiMode mode)
         {
-            mTarget.SetAiMode(mode);
+            mBaseAi.SetAiMode(mode);
         }
 
 
         protected virtual void SetDefaultAiMode()
         {
-            SetAiMode(mTarget.m_DefaultMode);
+            SetAiMode(mBaseAi.m_DefaultMode);
         }
 
 
@@ -184,13 +186,67 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual bool CheckTargetDead()
         {
-            if (mTarget.m_CurrentTarget.IsDead())
+            if (mBaseAi.m_CurrentTarget.IsDead())
             {
                 ProcessTargetDead();
                 return true;
             }
             return false;
         }
+
+
+        protected virtual bool TryGetTargetPosition(out Vector3 targetPosition)
+        {
+            if (mBaseAi.m_CurrentTarget.transform == null)
+            {
+                targetPosition = Vector3.zero;
+                return false;
+            }
+            targetPosition = mBaseAi.m_CurrentTarget.transform.position;
+            return true;
+        }
+
+
+        protected virtual void RefreshTargetPosition()
+        {
+            if (TryGetTargetPosition(out Vector3 targetPosition))
+            {
+                mBaseAi.MaybeAdjustTargetPosition(targetPosition);
+            }
+        }
+
+
+        protected virtual bool CanReachTarget(Vector3 targetPosition)
+        {
+            return mBaseAi.CanPlayerBeReached(targetPosition);
+        }
+
+
+        protected virtual bool MaybeHoldGroundForAttackCustom(HoldGroundReason reason, Func<float, bool> shouldHoldGroundFunc)
+        {
+            if (mBaseAi == null || mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
+                return false;
+
+            float innerRadius = mBaseAi.GetInnerRadiusForHoldGroundCause(reason);
+            float outerRadius = mBaseAi.GetOuterRadiusForHoldGroundCause(reason);
+
+            bool allowSlowdown = BaseAi.m_AllowSlowdownForHold;
+
+            if (shouldHoldGroundFunc.Invoke(innerRadius))
+            {
+                SetAiMode(AiMode.HoldGround);
+                return true;
+            }
+
+            if (allowSlowdown && shouldHoldGroundFunc.Invoke(innerRadius))
+            {
+                mBaseAi.m_HoldGroundReason = reason;
+                RefreshTargetPosition();
+                return true;
+            }
+            return false;
+        }
+
 
         #endregion
 
@@ -211,7 +267,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual bool CheckCurrentTargetNull(string failContext)
         {
-            if (mTarget.m_CurrentTarget == null)
+            if (mBaseAi.m_CurrentTarget == null)
             {
                 Fail(failContext, "Null target!");
                 SetDefaultAiMode();
@@ -223,7 +279,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual bool CheckCurrentTargetGameObjectNull(string failContext)
         {
-            if (mTarget.m_CurrentTarget.gameObject == null)
+            if (mBaseAi.m_CurrentTarget.gameObject == null)
             {
                 Fail(failContext, "Null target gameobject!");
                 SetDefaultAiMode();
@@ -249,114 +305,141 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #endregion
 
 
-        #region General Helpers
-
-
-
-
-
-        #endregion
-
-
-
-
-
         #region ProcessXYZ overrides
 
 
         void ProcessAttack()
         {
-            if (CheckCurrentTargetInvalid("ProcessAttack")) return;
-            if (!TryGetPlayerManager("ProcessAttack", out PlayerManager playerManager)) return;
-            if (CheckSceneTransitionStarted(playerManager)) { return; }
-            ProcessStartAttackHowl();
-            if (CheckTargetDead()) return;
-            //check for active struggle
-            if (mTarget.m_CurrentTarget.IsPlayer() && !playerManager.PlayerIsInvisibleToAi() && !GameManager.m_PlayerStruggle.m_Active)
-            {
-                SetDefaultAiMode();
+            if (CheckCurrentTargetInvalid("ProcessAttack"))
                 return;
-            }
+            if (!TryGetPlayerManager("ProcessAttack", out PlayerManager playerManager))
+                return;
+            if (CheckSceneTransitionStarted(playerManager))
+                return;
+            if (CheckTargetDead())
+                return;
 
-            if (mTarget.m_CurrentTarget.IsPlayer())
+            ProcessStartAttackHowl();
+            //check for active struggle
+            if (mBaseAi.m_CurrentTarget.IsPlayer())
             {
-                if (mTarget.m_CurrentTarget
+                if (!playerManager.PlayerIsInvisibleToAi() && !GameManager.m_PlayerStruggle.m_Active)
+                {
+                    SetDefaultAiMode();
+                    return;
+                }
+                if (!TryGetTargetPosition(out Vector3 targetPosition))
+                {
+                    SetDefaultAiMode();
+                    return;
+                }
+                if (CanReachTarget(targetPosition))
+                {
+                    mBaseAi.m_LastKnownAttackTargetPosition = targetPosition;
+                }
             }
 
-            /*
-            if (mTarget.m_CurrentTarget.IsPlayer())
-	        {
-	
-		        if ((m_CurrentTarget == (AiTarget_o *)0x0) ||
-		           (pUVar12 = SuperSplines.SplineNode$$get_Transform((SuperSplines_SplineNode_o *)m_CurrentTarget,(MethodInfo *)0x0), pUVar12 == (UnityEngine_Transform_o *)0x0)) goto LAB_1805279f2;
-		        local_88.x = 0.0;
-		        local_88.y = 0.0;
-		        local_88._8_8_ = local_88._8_8_ & 0xffffffff00000000;
-		        pcVar10 = DAT_1843f8f20;
-		        if ((DAT_1843f8f20 == (code *)0x0) &&
-		           (pcVar10 = (code *)FUN_1802f1f40(
-										           "UnityEngine.Transform::get_position_Injected(UnityEngine .Vector3&)"
-										           ), pcVar10 == (code *)0x0)) {
-		          uVar18 = FUN_1802f1ba0(
-								        "UnityEngine.Transform::get_position_Injected(UnityEngine.Vector3&)"
-								        );
-		          FUN_1802efda0(uVar18,0);
-		          pcVar10 = (code *)swi(3);
-		          (*pcVar10)();
-		          return;
-		        }
-		        DAT_1843f8f20 = pcVar10;
-		        (*DAT_1843f8f20)(pUVar12,&local_88);
-		        local_68.x = local_88.x;
-		        local_68.y = local_88.y;
-		        local_68.z = local_88.z;
-		        bvar = BaseAi$$CanPlayerBeReached
-						         (__this,(UnityEngine_Vector3_o *)&local_68,1,(MethodInfo *)0x0);
-		        if (bvar) {
-		          m_CurrentTarget = (__this->fields).m_CurrentTarget;
-		          if ((m_CurrentTarget == (AiTarget_o *)0x0) ||
-			         (pUVar12 = SuperSplines.SplineNode$$get_Transform
-								          ((SuperSplines_SplineNode_o *)m_CurrentTarget,(MethodInfo *)0x0 ),
-			         pUVar12 == (UnityEngine_Transform_o *)0x0)) goto LAB_1805279f2;
-		          local_88.x = 0.0;
-		          local_88.y = 0.0;
-		          local_88._8_8_ = local_88._8_8_ & 0xffffffff00000000;
-		          pcVar10 = DAT_1843f8f20;
-		          if ((DAT_1843f8f20 == (code *)0x0) &&
-			         (pcVar10 = (code *)FUN_1802f1f40(
-											         "UnityEngine.Transform::get_position_Injected(UnityEngi ne.Vector3&)"
-											         ), pcVar10 == (code *)0x0)) {
-			        uVar18 = FUN_1802f1ba0(
-								          "UnityEngine.Transform::get_position_Injected(UnityEngine.Vector3& )"
-								          );
-			        FUN_1802efda0(uVar18,0);
-			        pcVar10 = (code *)swi(3);
-			        (*pcVar10)();
-			        return;
-		          }
-		          DAT_1843f8f20 = pcVar10;
-		          (*DAT_1843f8f20)(pUVar12);
-		          (__this->fields).m_LastKnownAttackTargetPosition.fields.x = local_88.x;
-		          (__this->fields).m_LastKnownAttackTargetPosition.fields.y = local_88.y;
-		          (__this->fields).m_LastKnownAttackTargetPosition.fields.z = local_88.z;
-		        }
-	        }
-             */
+            if (mBaseAi.m_PlayingAttackStartAnimation)
+            {
+                AiUtils.TurnTowardsTarget(mBaseAi);
+                mBaseAi.MaybeApplyAttack();
+                if (mBaseAi.m_TimeInModeSeconds <= mBaseAi.m_AnimationTime)
+                    return;
+                mBaseAi.m_PlayingAttackStartAnimation = false;
+            }
 
+            mBaseAi.m_HoldGroundReason = HoldGroundReason.None;
+            if (mBaseAi.CanHoldGround())
+            {
+                if (mBaseAi.IsInFlashLight())
+                {
+                    if (mBaseAi.Timberwolf != null)
+                    {
+                        SetAiMode(AiMode.Flee);
+                        return;
+                    }
+                }
+                else
+                {
+                    float targetDistance = mBaseAi.m_CurrentTarget.Distance(mBaseAi.transform.position);
+                    if (targetDistance <= mBaseAi.m_FightOrFlightRange)
+                    {
+                        if (mBaseAi.StarvingWolf != null)
+                        {
+                            if (GameManager.m_ChemicalPoisoning != null)
+                            {
+                                //Something to do with the chemical poisoning as well, but I can't decode this shit. lol
+                                /*
+					            if (*(char *)&GameManager.m_ChemicalPoisoning[7].monitor != '\0') 
+					            {
+						            mode = 4;
+						            goto LAB_1805279b4;
+					            }
+                                 */
+                            }
+                        }
+                        //goto LAB_180527487; basically, exit "CanHoldGround" mode and do further processing, im assuming stalking up on shit
+                    }
+                }
+                if (mBaseAi.MaybeHoldGroundDueToSafeHaven())
+                    return;
+                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Spear, (radius) => mBaseAi.MaybeHoldGroundForSpear(radius)))
+                    return;
+                if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
+                {
+                    if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Torch, (radius) => mBaseAi.MaybeHoldGroundForTorch(radius)))
+                        return;
+                    if (MaybeHoldGroundForAttackCustom(HoldGroundReason.TorchOnGround, (radius) => mBaseAi.MaybeHoldGroundForTorchOnGround(radius)))
+                        return;
+                }
+                if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
+                {
+                    if (MaybeHoldGroundForAttackCustom(HoldGroundReason.RedFlare, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
+                        return;
+                    if (MaybeHoldGroundForAttackCustom(HoldGroundReason.RedFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForRedFlareOnGround(radius)))
+                        return;
+                }
+                if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
+                {
+                    if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Fire, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
+                        return;
+                }
+                if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
+                {
+                    if (MaybeHoldGroundForAttackCustom(HoldGroundReason.BlueFlare, (radius) => mBaseAi.MaybeHoldGroundForBlueFlare(radius)))
+                        return;
+                    if (MaybeHoldGroundForAttackCustom(HoldGroundReason.BlueFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForBlueFlareOnGround(radius)))
+                        return;
+                }
 
+                if (mBaseAi.m_HoldGroundReason != HoldGroundReason.None)
+                {
+                    if (!mBaseAi.m_UseSlowdownForHold)
+                    {
+                        if (BaseAi.m_AllowSlowdownForHold && !mBaseAi.IsInFlashLight())
+                        {
+                            RefreshTargetPosition();
+                            switch (mBaseAi.m_HoldGroundReason)
+                            {
+                              
+
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         #endregion
-
 
 
         #region Overridable Sub-Processes
 
         protected virtual void ProcessStartAttackHowl()
         {
-            if (mTarget.m_CurrentTarget.IsPlayer() && mTarget.m_AttackingLoopAudioID == 0 && mTarget.m_TimeInModeSeconds > 1.5)
+            if (mBaseAi.m_CurrentTarget.IsPlayer() && mBaseAi.m_AttackingLoopAudioID == 0 && mBaseAi.m_TimeInModeSeconds > 1.5)
             {
-                mTarget.m_AttackingLoopAudioID = GameAudioManager.Play3DSound(mTarget.m_ChasingAudio, mTarget.gameObject);
+                mBaseAi.m_AttackingLoopAudioID = GameAudioManager.Play3DSound(mBaseAi.m_ChasingAudio, mBaseAi.gameObject);
             }
         }
 
@@ -365,6 +448,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             ClearTargetAndSetDefaultAiMode();
         }
+
 
         #endregion
     }

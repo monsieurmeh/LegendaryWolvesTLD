@@ -97,7 +97,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             foreach (ICustomWolfAI customWolfAi in mAiAugments.Values)
             {
-                TryUnaugmentWolf(customWolfAi.Target);
+                TryUnaugmentWolf(customWolfAi.BaseAi);
             }
             mAiAugments.Clear();
         }

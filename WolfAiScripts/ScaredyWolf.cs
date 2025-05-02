@@ -19,7 +19,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected override void Process()
         {
 
-            switch (mTarget?.m_CurrentMode ?? AiMode.None)
+            switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
             {
                 case AiMode.Attack:
                 case AiMode.Flee:
@@ -28,7 +28,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #if DEV_BUILD_LOG
                         Log("Flee, scaredy wolf!");
 #endif
-                    mTarget.ProcessFlee();
+                    mBaseAi.ProcessFlee();
                     break;
                 default:
                     base.Process();
@@ -39,7 +39,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public override void Augment()
         {
-            if (mTarget.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
+            if (mBaseAi.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
             {
                 renderer.material.color = Color.yellow;
             }

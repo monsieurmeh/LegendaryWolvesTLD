@@ -25,9 +25,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             poi.m_Location = new Vector3(playerTransform.position.x + 10, playerTransform.position.y, playerTransform.position.z + 10); 
             poi.m_Location = new Vector3(playerTransform.position.x - 10, playerTransform.position.y, playerTransform.position.z - 10);
             poi.m_Location = new Vector3(playerTransform.position.x - 10, playerTransform.position.y, playerTransform.position.z + 10);
-            mTarget.m_WalkSpeed *= 10;
-            mTarget.m_ActivePointsOfInterest.Add(poi); 
-            if (mTarget.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
+            mBaseAi.m_WalkSpeed *= 10;
+            mBaseAi.m_ActivePointsOfInterest.Add(poi); 
+            if (mBaseAi.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
             {
                 renderer.material.color = Color.cyan;
             }
