@@ -11,6 +11,7 @@ using static UnityEngine.GraphicsBuffer;
 using System.Reflection;
 using Il2CppSuperSplines;
 using ModSettings;
+using UnityEngine.Playables;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -74,6 +75,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
             {
                 case AiMode.Attack:
+                    Log($"Processing Attack state");
                     ProcessAttack();
                     break;
                 case AiMode.Dead:
@@ -176,6 +178,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void SetAiMode(AiMode mode)
         {
+            Log($"Setting aimode to {mode}");
             mBaseAi.SetAiMode(mode);
         }
 
@@ -191,9 +194,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             if (playerManager.m_SceneTransitionStarted)
             {
                 SetDefaultAiMode();
-                return false;
+                return true;
             }
-            return true;
+            return false;
         }
 
 
@@ -240,8 +243,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             if (mBaseAi == null || mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
                 return false;
 
-            float innerRadius = mBaseAi.GetInnerRadiusForHoldGroundCause(reason);
-            float outerRadius = mBaseAi.GetOuterRadiusForHoldGroundCause(reason);
+            float innerRadius = GetInnerRadiusForHoldGroundCause(reason);
+            float outerRadius = GetOuterRadiusForHoldGroundCause(reason);
 
             bool allowSlowdown = BaseAi.m_AllowSlowdownForHold;
 
@@ -258,6 +261,30 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 return true;
             }
             return false;
+        }
+
+
+        protected virtual float GetInnerRadiusForHoldGroundCause(HoldGroundReason reason)
+        {
+            switch (reason)
+            {
+                case HoldGroundReason.Spear:
+                    return 10f;
+                default:
+                    return mBaseAi.GetInnerRadiusForHoldGroundCause(reason);
+            }
+        }
+
+
+        protected virtual float GetOuterRadiusForHoldGroundCause(HoldGroundReason reason)
+        {
+            switch (reason)
+            {
+                case HoldGroundReason.Spear:
+                    return 15f;
+                default:
+                    return mBaseAi.GetOuterRadiusForHoldGroundCause(reason);
+            }
         }
 
 
@@ -349,28 +376,42 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessAttack()
         {
+            Log($"[ProcessAttack] started!");
             if (CheckCurrentTargetInvalid("ProcessAttack"))
+            {
+                Log($"[ProcessAttack] Invalid target, aborting...");
                 return;
+            }
             if (!TryGetPlayerManager("ProcessAttack", out PlayerManager playerManager))
+            {
+                Log($"[ProcessAttack] No player manager, aborting...");
                 return;
+            }
             if (CheckSceneTransitionStarted(playerManager))
+            {
+                Log($"[ProcessAttack] Scene transition started, aborting...");
                 return;
+            }
             if (CheckTargetDead())
+            {
+                Log($"[ProcessAttack] Target is dead, aborting...");
                 return;
-
+            }
             ProcessStartAttackHowl();
 
 
             //check for active struggle
             if (CurrentTarget.IsPlayer())
             {
-                if (!playerManager.PlayerIsInvisibleToAi() && !GameManager.m_PlayerStruggle.m_Active)
+                if (playerManager.PlayerIsInvisibleToAi() && !GameManager.m_PlayerStruggle.m_Active)
                 {
+                    //Log($"[ProcessAttack] Target is player, player is invisible, no struggle, setting default AI mode and aborting...");
                     SetDefaultAiMode();
                     return;
                 }
                 if (!TryGetTargetPosition(out Vector3 targetPosition))
                 {
+                    //Log($"[ProcessAttack] Can't get target position, setting default AI mode and aborting...");
                     SetDefaultAiMode();
                     return;
                 }
@@ -382,10 +423,14 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             if (mBaseAi.m_PlayingAttackStartAnimation)
             {
+                //Log($"[ProcessAttack] playing start attack animation, trying to apply attack...");
                 AiUtils.TurnTowardsTarget(mBaseAi);
                 mBaseAi.MaybeApplyAttack();
                 if (mBaseAi.m_TimeInModeSeconds <= mBaseAi.m_AnimationTime)
+                {
+                    //Log($"[ProcessAttack] playing start attack animation, trying to apply attack...");
                     return;
+                }
                 mBaseAi.m_PlayingAttackStartAnimation = false;
             }
 
@@ -396,6 +441,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 {
                     if (mBaseAi.Timberwolf != null)
                     {
+                        //Log($"[ProcessAttack] Flee, timberwolf!");
                         SetAiMode(AiMode.Flee);
                         return;
                     }
@@ -405,6 +451,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     float targetDistance = CurrentTarget.Distance(mBaseAi.transform.position);
                     if (targetDistance <= mBaseAi.m_FightOrFlightRange)
                     {
+                        //Log($"[ProcessAttack] Target distance less than or equal to fight or flight distance, moving to ProcessAttack2()");
                         if (mBaseAi.StarvingWolf != null)
                         {
                             if (GameManager.m_ChemicalPoisoning != null)
@@ -424,34 +471,61 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     }
                 }
                 if (mBaseAi.MaybeHoldGroundDueToSafeHaven())
+                { 
+                    Log($"[ProcessAttack] Holding ground due to safe haven, aborting...");
                     return;
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Spear, (radius) => mBaseAi.MaybeHoldGroundForSpear(radius)))
+                }
+                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Spear, MaybeHoldGroundForSpearCustom))
+                {
+                    Log($"[ProcessAttack] Holding ground due spear threat, aborting...");
                     return;
+                }
                 if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
                 {
                     if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Torch, (radius) => mBaseAi.MaybeHoldGroundForTorch(radius)))
+                    {
+                        Log($"[ProcessAttack] Holding ground due torch, aborting...");
                         return;
+                    }
                     if (MaybeHoldGroundForAttackCustom(HoldGroundReason.TorchOnGround, (radius) => mBaseAi.MaybeHoldGroundForTorchOnGround(radius)))
+                    {
+                        Log($"[ProcessAttack] Holding ground due to torch on ground, aborting...");
                         return;
+                    }
                 }
                 if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
                 {
                     if (MaybeHoldGroundForAttackCustom(HoldGroundReason.RedFlare, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
+                    {
+                        Log($"[ProcessAttack] Holding due to red flare, aborting...");
                         return;
+                    }
                     if (MaybeHoldGroundForAttackCustom(HoldGroundReason.RedFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForRedFlareOnGround(radius)))
+                    {
+                        Log($"[ProcessAttack] Holding due to red flare on ground, aborting...");
                         return;
+                    }
                 }
                 if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
                 {
                     if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Fire, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
+                    {
+                        Log($"[ProcessAttack] Holding due to fire, aborting...");
                         return;
+                    }
                 }
                 if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
                 {
                     if (MaybeHoldGroundForAttackCustom(HoldGroundReason.BlueFlare, (radius) => mBaseAi.MaybeHoldGroundForBlueFlare(radius)))
+                    {
+                        Log($"[ProcessAttack] Holding due to blue flare , aborting...");
                         return;
+                    }
                     if (MaybeHoldGroundForAttackCustom(HoldGroundReason.BlueFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForBlueFlareOnGround(radius)))
+                    {
+                        Log($"[ProcessAttack] Holding due to blue flare on ground, aborting...");
                         return;
+                    }
                 }
 
                 if (mBaseAi.m_HoldGroundReason != HoldGroundReason.None)
@@ -718,6 +792,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                                 {
                                     if (mBaseAi.m_AiGoalSpeed >= 0.0001f)
                                     {
+                                        Log($"[ProcessAttack] player is too close for hold ground, approaching...");
                                         mBaseAi.StartPath(mBaseAi.m_AdjustedTargetPosition, 0.0f, null);
                                         return;
                                     }
@@ -731,6 +806,60 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             //if we've gotten this far, lets move on to next method
             ProcessAttack2();
+        }
+
+        #endregion
+
+
+        #region MaybeHoldGround overrides
+
+        protected virtual bool MaybeHoldGroundForSpearCustom(float radius)
+        {
+            if (mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
+            {
+                Log($"[MaybeHoldGroundForSpearCustom] Aurora wildlife, dont stop for spear");
+                return false;
+            }
+
+            if (Math.Abs(radius) <= 0.0001f)
+            {
+                Log($"[MaybeHoldGroundForSpearCustom] small check radius, dont stop for spear");
+                return false;
+            }
+
+            PlayerManager player = GameManager.m_PlayerManager;
+
+            if (player == null)
+            {
+                Log($"[MaybeHoldGroundForSpearCustom] null playermanager, dont stop for spear");
+                return false;
+            }
+
+            if (player.m_ItemInHandsInternal == null)
+            {
+                Log($"[MaybeHoldGroundForSpearCustom] no item in hands, dont stop for spear");
+                return false;
+            }
+
+            // Ensure the player exists and is holding a spear (weapon ID = 2)
+            if (player.m_ItemInHandsInternal.m_BearSpearItem == null)
+            {
+                Log($"[MaybeHoldGroundForSpearCustom] item in hand is not bear spear, dont stop for spear");
+                return false;
+            }
+
+            Vector3 aiForward = mBaseAi.m_CachedTransform.forward;
+            Vector3 playerForward = GameManager.GetPlayerTransform().forward;
+
+            float angle = Vector3.Angle(aiForward, -playerForward); 
+
+            if (angle > 45.0f)
+            {
+                Log($"[MaybeHoldGroundForSpearCustom] Not looking at each other, dont stop for spear");
+                return false;
+            }
+
+            return true;
         }
 
         #endregion
@@ -755,6 +884,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessAttack2()
         {
+            Log($"[ProcessAttack2] Starting...");
             Vector3 targetPos;
             Transform targetTransform;
 
@@ -765,6 +895,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             catch
             {
+                Log($"[ProcessAttack2] Couldn't convert target to SplineNode, using native target transform for position...");
                 targetTransform = CurrentTarget.transform;
             }
 
@@ -773,9 +904,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             if (BaseAi.Moose != null && BaseAi.Moose.MaybeFleeOnSlope())
             {
+                Log($"[ProcessAttack2] is moose and on slope, run away!");
                 return;
             }
 
+            /* This is clearly wintermute code, ignore
             if (CurrentTarget.IsNpcSurvivor())
             {
                 Vector3 headOffset = mBaseAi.m_HeadOffset;
@@ -784,6 +917,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
                 Vector3 delta = targetPos - adjustedOffset;
             }
+            */
 
             if (CurrentTarget.IsPlayer())
             {
@@ -791,8 +925,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
                 if (!mBaseAi.CanPlayerBeReached(delta))
                 {
+                    Log($"[ProcessAttack2] Cant reach player!");
                     if (mBaseAi.m_DefaultMode != (AiMode)0x16)
                     {
+                        Log($"[ProcessAttack2] Default mode is not {(AiMode)0x16}, triggering CantReachTarget and aborting");
                         mBaseAi.CantReachTarget();
                         mBaseAi.m_LastKnownAttackTargetPosition = Vector3.zero;
                         return;
@@ -809,6 +945,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     }
                     catch
                     {
+                        Log($"[ProcessAttack2] Couldn't convert self to SplineNode, using native self transform for position...");
                         selfTransform = mBaseAi.transform;
                     }
 
@@ -823,6 +960,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
                     if (flatDistance < 7.0f)
                     {
+                        Log($"[ProcessAttack2] Last known location within arbitrary distance of 7, creating new point of interest, setting ai mode to {(AiMode)0x16}, engaging roar trigger and stopping move agent");
                         PointOfInterest pointOfInterest = new PointOfInterest();
                         pointOfInterest.m_Location = lastKnown;
 
@@ -837,6 +975,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 }
             }
 
+
             mBaseAi.m_LastKnownAttackTargetPosition = targetPos;
             float runSpeed = CurrentTarget.IsPlayer() ? mBaseAi.m_ChasePlayerSpeed : mBaseAi.m_RunSpeed;
 
@@ -846,39 +985,25 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 targetPos = adjustedPos;
                 runSpeed = mBaseAi.m_SpeedWhileStopping;
             }
+
             bool pathStarted = mBaseAi.StartPath(targetPos, runSpeed, null);
             if (!pathStarted)
             {
+                Log($"[ProcessAttack2] Path starteed but returned false, triggering CantReachTarget and aborting");
                 mBaseAi.CantReachTarget();
                 return;
             }
 
             if (mBaseAi.m_HoldGroundReason == 0)
-                mBaseAi.MaybeApplyAttack();
-
-            if (!CurrentTarget.IsDead())
-                return;
-
-            /* Keeping for later in case I decide to do more with cougars. For augmented wolves this is not needed
-            // Cougar fallback logic
-            var cougar = BaseAi.get_Cougar(this);
-            if (cougar == null)
             {
-                Transform cachedTransform = this.m_CachedTransform;
-                if (cachedTransform == null || CurrentTarget == null) return;
-
-                Vector3 position = cachedTransform.position;
-                float distance = CurrentTarget.Distance(position);
-
-                if (distance < this.m_RangeMeleeAttack + 1.0f)
-                {
-                    int mode = 3;
-                    // Possibly set AI mode to attack
-                }
+                Log($"[ProcessAttack2] Got to end of attack phase, trying to apply attack action!");
+                mBaseAi.MaybeApplyAttack();
             }
-            */
+            else
+            {
+                Log($"[ProcessAttack2] Got to end of attack phase but still had a reason to hold ground! we should have caught this I think...");
+            }
         }
-
 
         #endregion
     }

@@ -1,5 +1,6 @@
 ﻿#define DEV_BUILD
 #define DEV_BUILD_LOG
+//#define DEV_BUILD_SPAWNONE
 //#define DEV_BUILD_LOG_VERBOSE
 
 using Il2Cpp;
@@ -44,6 +45,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         private bool mEnabled = false;
         private long mStartTime = System.DateTime.Now.Ticks;
         private long mLastReadoutTime = System.DateTime.Now.Ticks;
+
+#if DEV_BUILD_SPAWNONE
+        private bool mSpawnedOne = false;
+#endif 
 
         private Dictionary<int, ICustomWolfAI> mAiAugments;
 
@@ -111,32 +116,26 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
                 if (baseAi == null)
                 {
-#if DEV_BUILD_LOG_VERBOSE
-                    Log("null BaseAi, aborting TryAugmentWolf");
-#endif
                     return false;
                 }
                 if (baseAi.m_AiType != AiType.Predator)
                 {
-#if DEV_BUILD_LOG_VERBOSE
-                    Log(baseAi, " is not a predator, aborting TryAugmentWolf");
-#endif
                     return false;
                 }
                 if (baseAi.m_AiSubType != AiSubType.Wolf)
                 {
-#if DEV_BUILD_LOG_VERBOSE
-                    Log(baseAi, " is not a wolf, aborting TryAugmentWolf");
-#endif
                     return false;
                 }
                 if (mAiAugments.ContainsKey(baseAi.GetHashCode()))
                 {
-#if DEV_BUILD_LOG_VERBOSE
-                    Log(baseAi, " is already in list, aborting TryAugmentWolf");
-#endif
                     return false;
                 }
+#if DEV_BUILD_SPAWNONE
+                if (mSpawnedOne)
+                {
+                    return false;
+                }
+#endif
                 AugmentWolf(baseAi, augmentValue);
                 return true;
  #if DEV_BUILD           
@@ -180,14 +179,14 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 //mAiAugments.Add(baseAi.GetHashCode(), new BigWolf(baseAi));
                 //break;
                 default:
-#if DEV_BUILD_LOG
-                    Log($"No handler for {newType}, aborting AugmentWolf...");
-#endif
                     return;
             }
             if (mAiAugments.TryGetValue(baseAi.GetHashCode(), out ICustomWolfAI customWolfAi))
             {
                 customWolfAi.Augment();
+#if DEV_BUILD_SPAWNONE
+                mSpawnedOne = true;
+#endif
             }
         }
 
@@ -200,21 +199,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
                 if (baseAI == null)
                 {
-#if DEV_BUILD_LOG_VERBOSE
-                    Log($"Null base Ai, aborting TryUnaugmentWolf");
-#endif
                     return false;
                 }
                 if (!mAiAugments.ContainsKey(baseAI.GetHashCode()))
                 {
-#if DEV_BUILD_LOG_VERBOSE
-                    Log(baseAI, $" is not contained in list, aborting tryUnaugmentWolf");
-#endif
                     return false;
                 }
-#if DEV_BUILD_LOG_VERBOSE
-                Log($"Previously augmented AI found on {BaseAiInfo(baseAI)}, un-augmenting...");
-#endif
                 UnaugmentWolf(baseAI.GetHashCode());
                 return true;
 #if DEV_BUILD

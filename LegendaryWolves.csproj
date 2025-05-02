@@ -41,11 +41,14 @@
     <Reference Include="MelonLoader" />
     <Reference Include="0Harmony" />
     <Reference Include="Assembly-CSharp" />
+    <Reference Include="Assembly-CSharp-firstpass" />
     <Reference Include="Il2CppHOTween" />
     <Reference Include="Il2Cppmscorlib" />
     <Reference Include="Il2CppNewtonsoft.Json" />
     <Reference Include="Il2CppSystem.Configuration" />
-    <Reference Include="Il2CppSystem" />
+    <Reference Include="Il2CppSystem" /> 
+    <Reference Include="Il2CppSystem.Core" />
+    <Reference Include="Il2CppRewired_Core" />
     <Reference Include="Il2CppSystem.Runtime.Serialization" />
     <Reference Include="Il2CppAK.Wwise.Unity.API.WwiseTypes" />
     <Reference Include="Il2CppTLD.Addressables" />
@@ -74,6 +77,7 @@
     <Reference Include="UnityEngine.AssetBundleModule" />
     <Reference Include="UnityEngine.CoreModule" />
     <Reference Include="UnityEngine" />
+    <Reference Include="UnityEngine.PhysicsModule" />
     <Reference Include="UnityEngine.InputLegacyModule" />
     <Reference Include="UnityEngine.InputModule" />
     <Reference Include="UnityEngine.Il2CppAssetBundleManager" />
