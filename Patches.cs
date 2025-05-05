@@ -59,6 +59,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         [HarmonyPatch(typeof(BaseAi), "Update")]
         internal class BaseAiPatches_Update
         {
+#if DEV_BUILD_PROFILE
             internal struct StateData
             {
                 public int mId;
@@ -72,7 +73,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     mName = name;
                 }
             }
-
+#endif
             public static bool Prefix(BaseAi __instance
 #if DEV_BUILD
 #if DEV_BUILD_PROFILE
