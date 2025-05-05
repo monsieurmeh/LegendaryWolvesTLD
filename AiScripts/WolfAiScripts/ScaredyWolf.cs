@@ -16,7 +16,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public ScaredyWolf(BaseAi target) : base(target) { }
 
-        protected override void Process()
+        protected override bool Process()
         {
 
             switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
@@ -29,10 +29,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                         Log("Flee, scaredy wolf!");
 #endif
                     mBaseAi.ProcessFlee();
-                    break;
+                    return true;
                 default:
-                    base.Process();
-                    break;
+                    return base.Process();
             }
         }
 

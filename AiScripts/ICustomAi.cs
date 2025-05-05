@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
-    public interface ICustomWolfAI
+    public interface ICustomAi
     {
-        WolfTypes WolfType { get; }
         BaseAi BaseAi { get; }
         void ProcessCurrentAiMode();
         void Augment();

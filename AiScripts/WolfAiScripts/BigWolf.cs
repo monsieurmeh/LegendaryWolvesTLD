@@ -12,28 +12,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
     public class BigWolf : BaseWolf
     {
-        protected Quaternion mCurrentRotation;
         protected float mAugmentFactor;
         public override WolfTypes WolfType { get { return WolfTypes.BigWolf; } }
 
         public BigWolf(BaseAi target, float augmentFactor = 0f) : base(target) { mAugmentFactor = augmentFactor; }
-
-
-        protected override void Process()
-        {
-            switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
-            {
-                case AiMode.Idle:
-                    mBaseAi.ProcessIdle();
-                    //spin like your life depends on it mf
-                    mCurrentRotation *= Quaternion.Euler(Vector3.up * 5);
-                    mBaseAi.gameObject?.transform?.set_localRotation_Injected(ref mCurrentRotation);
-                    break;
-                default:
-                    base.Process();
-                    break;
-            }
-        }
 
 
         public override void Augment()
@@ -46,11 +28,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 mAugmentFactor = new System.Random().Next(500, 1000) * 0.01f;
             }
-            mBaseAi.m_RunSpeed *= mAugmentFactor;
-            mBaseAi.m_StalkSpeed *= mAugmentFactor;
-            mBaseAi.m_WalkSpeed *= mAugmentFactor;
-            mBaseAi.m_turnSpeed *= mAugmentFactor;
-            mBaseAi.m_TurnSpeedDegreesPerSecond *= mAugmentFactor;
+            mBaseAi.m_RunSpeed *= (mAugmentFactor * mAugmentFactor);
+            mBaseAi.m_StalkSpeed *= (mAugmentFactor * mAugmentFactor);
+            mBaseAi.m_WalkSpeed *= (mAugmentFactor * mAugmentFactor);
+            mBaseAi.m_turnSpeed *= (mAugmentFactor * (mAugmentFactor * mAugmentFactor));
+            mBaseAi.m_TurnSpeedDegreesPerSecond *= (mAugmentFactor * mAugmentFactor);
             Vector3 newScale = new Vector3(mAugmentFactor, mAugmentFactor, mAugmentFactor);
             mBaseAi.gameObject.transform.set_localScale_Injected(ref newScale);
         }
@@ -61,5 +43,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             Vector3 one = Vector3.one;
             mBaseAi?.gameObject?.transform?.set_localScale_Injected(ref one);
         }
+
+
+        protected override float m_HoldGroundDistanceFromSpear { get { return 0f; } }
+        protected override float m_HoldGroundOuterDistanceFromSpear { get { return 0f; } }
     }
 }

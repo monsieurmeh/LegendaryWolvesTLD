@@ -1,6 +1,5 @@
 ﻿#define DEV_BUILD
-#define DEV_BUILD_LOG
-//#define DEV_BUILD_LOG_VERBOSE
+//#define DEV_BUILD_PROFILE
 
 using HarmonyLib;
 using Il2Cpp;
@@ -22,7 +21,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 try
                 {
 #endif
-                    Manager.TryAugmentWolf(__result, new System.Random().Next(100, 500) * 0.01f);
+                    Manager.TryAugment(__result, new System.Random().Next(100, 500) * 0.01f);
 #if DEV_BUILD
                 }
                 catch (Exception e)
@@ -44,7 +43,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 try
                 {
 #endif
-                    Manager.TryUnaugmentWolf(__instance);
+                    Manager.TryUnaugment(__instance);
 #if DEV_BUILD
                 }
                 catch (Exception e)
@@ -56,49 +55,48 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
         }
 
-        
+
         [HarmonyPatch(typeof(BaseAi), "ProcessCurrentAiMode")]
         internal class BaseAiPatches_ProcessCurrentAiMode
         {
-            public static bool Prefix(BaseAi __instance)
+            internal struct StateData
+            {
+                public int mId;
+                public long mStartTime;
+                public string mName;
+
+                public StateData(int id, long startTime, string name)
+                {
+                    mId = id;
+                    mStartTime = startTime;
+                    mName = name;
+                }
+            }
+
+            public static bool Prefix(BaseAi __instance
+#if DEV_BUILD_PROFILE
+
+                , ref StateData __state
+
+#endif
+                )
             {
 #if DEV_BUILD
                 try
                 {
 #endif
-                    if (__instance == null)
-                    {
-#if DEV_BUILD_LOG_VERBOSE
-                        Log(__instance, " is null, aborting BaseAi.ProcessCurrentAiMode.Prefix");
+
+#if DEV_BUILD_PROFILE
+                    __state = new StateData(__instance.GetHashCode(), DateTime.Now.Ticks, __instance.gameObject?.name ?? "null");
+
 #endif
-                        return true;
-                    }
-                    if (__instance.m_AiType != AiType.Predator)
-                    {
-#if DEV_BUILD_LOG_VERBOSE
-                        Log(__instance, " is not a predator, aborting BaseAi.ProcessCurrentAiMode.Prefix");
+                    bool success = !Manager.TryProcessCurrentAiMode(__instance);
+
+#if DEV_BUILD_PROFILE
+                    Manager.LogCustomCycleTime(__state.mId, DateTime.Now.Ticks - __state.mStartTime, __state.mName);
+                    __state =  new StateData(__state.mId, DateTime.Now.Ticks, __state.mName);
 #endif
-                        return true;
-                    }
-                    if (__instance.m_AiSubType != AiSubType.Wolf)
-                    {
-#if DEV_BUILD_LOG_VERBOSE
-                        Log(__instance, " is not a wolf, aborting BaseAi.ProcessCurrentAiMode.Prefix");
-#endif
-                        return true;
-                    }
-                    if (!Manager.AiAugments.ContainsKey(__instance.GetHashCode()))
-                    {
-#if DEV_BUILD_LOG_VERBOSE
-                        Log(__instance, $" is not contained in augmented ai list with count {Instance.AugmentList.Count}, aborting BaseAi.ProcessCurrentAiMode.Prefix");
-#endif
-                        return true;
-                    }
-#if DEV_BUILD_LOG_VERBOSE
-                    Log(__instance, " looks good, running custom ai logic and aborting existing call");
-#endif
-                    Manager.ProcessCurrentAiMode(__instance);
-                    return false;
+                    return success;
 #if DEV_BUILD
                 }
                 catch (Exception e)
@@ -108,8 +106,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 }
 #endif
             }
+
+#if DEV_BUILD_PROFILE
+            public static void Postfix(ref StateData __state)
+            {
+                Manager.LogBaseCycleTime(__state.mId, DateTime.Now.Ticks - __state.mStartTime, __state.mName);
+            }
+#endif
         }
-        
+
 
         [HarmonyPatch(typeof(GameManager), "DoExitToMainMenu")]
         internal class GameManagerPatches_DoExitToMainMenu
