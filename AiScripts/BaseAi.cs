@@ -67,7 +67,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 {
                     mBaseAi.m_CurrentHP = 0.0f;
                     mBaseAi.StickPivotToGround();
-                    mBaseAi.SetAiMode(AiMode.Dead);
+                    SetAiMode(AiMode.Dead);
                     if (mBaseAi.GetHitInfoUnderPivot(out RaycastHit hitInfo))
                     {
                         mBaseAi.AlignTransformWithNormal(hitInfo.point, hitInfo.normal, mBaseAi.m_CurrentMode != AiMode.Dead, true);
@@ -164,6 +164,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             if (mBaseAi.m_CurrentMode != AiMode.Dead)
             {
+                mBaseAi.MaybeRestoreTargetAfterSpear();
+                mBaseAi.MaybeHoldGround();
+                mBaseAi.MaybeAttemptDodge();
                 mBaseAi.UpdateWounds(Time.deltaTime);
                 mBaseAi.m_SuppressFootStepDetectionAndSmellSecondsRemaining -= Time.deltaTime;
                 GameAudioManager.SetAudioSourceTransform(mBaseAi.m_EmitterProxy, mBaseAi.m_CachedTransform);
@@ -173,242 +176,41 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void Process()
         {
-
-            
             switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
             {
-                case (AiMode)7:
-                    BaseAi$$ClearTarget(__this, (MethodInfo*)0x0);
-                    BaseAi$$ScanForNewTarget(__this, (MethodInfo*)0x0);
-                    BaseAi$$ScanForSmells(__this, (MethodInfo*)0x0);
-                    if (((__this->fields).m_CurrentMode != 7) || ((__this->fields).m_StartMode == 7)) break;
-                    fVar11 = (__this->fields).m_TimeInModeSeconds;
-                    bVar5 = fVar11 == 10.0;
-                    bVar9 = fVar11 < 10.0;
-                    goto LAB_180533926;
-                case (AiMode)0xc:
-                    if (DAT_1843e1c90 == '\0')
-                    {
-                        FUN_180356210(&GameManager_TypeInfo);
-                        DAT_1843e1c90 = '\x01';
-                    }
-                    if ((__this->fields).m_Awake == false)
-                    {
-                        fVar11 = (__this->fields).m_TimeInModeTODHours;
-                        pfVar1 = &(__this->fields).m_SleepTimeHours;
-                        if (*pfVar1 <= fVar11 && fVar11 != *pfVar1)
-                        {
-                            if ((GameManager_TypeInfo->_2).cctor_finished == 0)
-                            {
-                                FUN_1802c5e40();
-                            }
-                            __this_01 = (Weather_o*)FUN_1804fe250();
-                            if (__this_01 == (Weather_o*)0x0)
-                            {
-                            LAB_180533de2:
-                                FUN_1802cf0f0();
-                                pcVar6 = (code*)swi(3);
-                                (*pcVar6)();
-                                return;
-                            }
-                            bVar5 = Weather$$IsBlizzard(__this_01, (MethodInfo*)0x0);
-                            if (bVar5)
-                            {
-                                fVar11 = (__this->fields).m_SleepTimeHours;
-                                fVar10 = fVar11 - 1.0;
-                                if (fVar10 < 0.0)
-                                {
-                                    fVar10 = 0.0;
-                                }
-                                else if (fVar11 < fVar10)
-                                {
-                                    (__this->fields).m_TimeInModeTODHours = fVar11;
-                                    break;
-                                }
-                                (__this->fields).m_TimeInModeTODHours = fVar10;
-                            }
-                            else
-                            {
-                                __this_00 = (__this->fields).m_Animator;
-                                if (__this_00 == (UnityEngine_Animator_o*)0x0) goto LAB_180533de2;
-                                UnityEngine.Animator$$SetBoolID
-                                          (__this_00, (__this->fields).m_AnimParameter_Sleep, false,
-                                           (MethodInfo*)0x0);
-                                (__this->fields).m_Awake = true;
-                                fVar11 = UnityEngine.Time$$get_time((MethodInfo*)0x0);
-                                (__this->fields).m_ExitSleepModeTime = fVar11 + 4.0;
-                            }
-                        }
-                        break;
-                    }
-                    pcVar6 = DAT_1843f8c50;
-                    if ((DAT_1843f8c50 == (code*)0x0) &&
-                       (pcVar6 = (code*)FUN_1802f1f40("UnityEngine.Time::get_time()"), pcVar6 == (code*)0x0))
-                    {
-                        uVar8 = FUN_1802f1ba0("UnityEngine.Time::get_time()");
-                        FUN_1802efda0(uVar8, 0);
-                        pcVar6 = (code*)swi(3);
-                        (*pcVar6)();
-                        return;
-                    }
-                    DAT_1843f8c50 = pcVar6;
-                    fVar11 = (float)(*DAT_1843f8c50)();
-                    pfVar1 = &(__this->fields).m_ExitSleepModeTime;
-                    bVar5 = fVar11 == *pfVar1;
-                    bVar9 = fVar11 < *pfVar1;
-                LAB_180533926:
-                    if (!bVar9 && !bVar5)
-                    {
-                    LAB_18053392c:
-                        BaseAi$$SetAiMode(__this, (__this->fields).m_DefaultMode, (MethodInfo*)0x0);
-                    }
+                case AiMode.Idle:
+                    ProcessIdle();
                     break;
-                case (AiMode)0xd:
-                case (AiMode)0x10:
-                    cVar4 = (*(__this->klass->vtable)._16_IsImposter.methodPtr)(__this);
-                    if (cVar4 == '\0')
-                    {
-                        fVar11 = (__this->fields).m_FailsafeExitTime;
-                        if (0.0 < fVar11)
-                        {
-                            pcVar6 = DAT_1843f8c70;
-                            if ((DAT_1843f8c70 == (code*)0x0) &&
-                               (pcVar6 = (code*)FUN_1802f1f40("UnityEngine.Time::get_deltaTime()"),
-                               pcVar6 == (code*)0x0))
-                            {
-                                uVar8 = FUN_1802f1ba0("UnityEngine.Time::get_deltaTime()");
-                                FUN_1802efda0(uVar8, 0);
-                                pcVar6 = (code*)swi(3);
-                                (*pcVar6)();
-                                return;
-                            }
-                            DAT_1843f8c70 = pcVar6;
-                            fVar10 = (float)(*DAT_1843f8c70)();
-                            fVar11 = fVar11 - fVar10;
-                            (__this->fields).m_FailsafeExitTime = fVar11;
-                            if (fVar11 <= 0.0)
-                            {
-                                if ((GameManager_TypeInfo->_2).cctor_finished == 0)
-                                {
-                                    FUN_1802c5e40();
-                                }
-                                __this_02 = (AuroraManager_o*)FUN_180562b20();
-                                if (__this_02 == (AuroraManager_o*)0x0) goto LAB_180533de2;
-                                AuroraManager$$AuroraIsActive(__this_02, (MethodInfo*)0x0);
-                                goto LAB_18053392c;
-                            }
-                        }
-                        BaseAi$$ScanForNewTarget(__this, (MethodInfo*)0x0);
-                        BaseAi$$MaybeHoldGroundAuroraField(__this, (MethodInfo*)0x0);
-                        break;
-                    }
-                    goto LAB_18053392c;
-                case (AiMode)0x11:
-                    local_38[0].x = (__this->fields).m_GoToPoint.fields.x;
-                    local_38[0].y = (__this->fields).m_GoToPoint.fields.y;
-                    local_38[0].z = (__this->fields).m_GoToPoint.fields.z;
-                    BaseAi$$StartPath(__this, (UnityEngine_Vector3_o*)local_38,
-                                      (__this->fields).m_GotoPointMovementSpeed, (AiTarget_o*)0x0,
-                                      (MethodInfo*)0x0);
-                    if ((__this->fields).m_State == 0)
-                    {
-                        pMVar2 = (__this->fields).m_MoveAgent;
-                        if (pMVar2 == (MoveAgent_o*)0x0) goto LAB_180533de2;
-                        if ((pMVar2->fields).m_DestinationReached != false)
-                        {
-                            (__this->fields).m_State = 1;
-                        }
-                    }
-                    if ((__this->fields).m_State == 1)
-                    {
-                        (__this->fields).m_State = 2;
-                        BaseAi$$SetAiMode(__this, (__this->fields).m_TargetMode, (MethodInfo*)0x0);
-                    }
+                case AiMode.Sleep:
+                    ProcessSleep();
                     break;
-                case (AiMode)0x14:
-                    pcVar6 = DAT_1843f8c50;
-                    if ((DAT_1843f8c50 == (code*)0x0) &&
-                       (pcVar6 = (code*)FUN_1802f1f40("UnityEngine.Time::get_time()"), pcVar6 == (code*)0x0))
-                    {
-                        uVar8 = FUN_1802f1ba0("UnityEngine.Time::get_time()");
-                        FUN_1802efda0(uVar8, 0);
-                        pcVar6 = (code*)swi(3);
-                        (*pcVar6)();
-                        return;
-                    }
-                    DAT_1843f8c50 = pcVar6;
-                    fVar11 = (float)(*DAT_1843f8c50)();
-                    if ((__this->fields).m_StunSeconds <= fVar11 - (__this->fields).m_StunStartTime)
-                    {
-                        fVar10 = (__this->fields).m_StunPosition.fields.x;
-                        fVar3 = (__this->fields).m_StunPosition.fields.y;
-                        fVar11 = (__this->fields).m_StunPosition.fields.z;
-                        BaseAi$$ClearTarget(__this, (MethodInfo*)0x0);
-                        (__this->fields).m_FleeFromPos.fields.x = fVar10;
-                        (__this->fields).m_FleeFromPos.fields.y = fVar3;
-                        (__this->fields).m_FleeFromPos.fields.z = fVar11;
-                        BaseAi$$SetAiMode(__this, 4, (MethodInfo*)0x0);
-                    }
+                case AiMode.Stalking:
+                    ProcessStalking();
                     break;
-                case (AiMode)0x15:
-                    __this_03 = BaseAi$$get_Moose(__this, (MethodInfo*)0x0);
-                    if ((UnityEngine.Object_TypeInfo->_2).cctor_finished == 0)
-                    {
-                        FUN_1802c5e40();
-                    }
-                    bVar5 = UnityEngine.Object$$op_Implicit((UnityEngine_Object_o*)__this_03, (MethodInfo*)0x0)
-                    ;
-                    if (bVar5)
-                    {
-                        if (__this_03 == (TLD_AI_AiMoose_o*)0x0) goto LAB_180533de2;
-                        TLD.AI.AiMoose$$ProcessScratchingAntlers(__this_03, (MethodInfo*)0x0);
-                    }
+                case AiMode.WanderPaused:
+                    ProcessWanderPaused();
                     break;
-                case (AiMode)0x17:
-                    pTVar7 = BaseAi$$get_Timberwolf(__this, (MethodInfo*)0x0);
-                    if ((UnityEngine.Object_TypeInfo->_2).cctor_finished == 0)
-                    {
-                        FUN_1802c5e40();
-                    }
-                    bVar5 = UnityEngine.Object$$op_Implicit((UnityEngine_Object_o*)pTVar7, (MethodInfo*)0x0);
-                    if (bVar5)
-                    {
-                        if (pTVar7 == (TLD_AI_AiTimberwolf_o*)0x0) goto LAB_180533de2;
-                        TLD.AI.AiTimberwolf$$ProcessHideAndSeek(pTVar7, (MethodInfo*)0x0);
-                    }
+                case AiMode.GoToPoint:
+                    ProcessGoToPoint();
                     break;
-                case (AiMode)0x18:
-                    pTVar7 = BaseAi$$get_Timberwolf(__this, (MethodInfo*)0x0);
-                    if ((UnityEngine.Object_TypeInfo->_2).cctor_finished == 0)
-                    {
-                        FUN_1802c5e40();
-                    }
-                    bVar5 = UnityEngine.Object$$op_Implicit((UnityEngine_Object_o*)pTVar7, (MethodInfo*)0x0);
-                    if (bVar5)
-                    {
-                        if (pTVar7 == (TLD_AI_AiTimberwolf_o*)0x0) goto LAB_180533de2;
-                        TLD.AI.AiTimberwolf$$ProcessJoinPack(pTVar7, (MethodInfo*)0x0);
-                    }
+                case AiMode.Stunned:
+                    ProcessStunned();
                     break;
-                case (AiMode)0x1a:
-                    __this_04 = BaseAi$$get_BaseWolf(__this, (MethodInfo*)0x0);
-                    if ((UnityEngine.Object_TypeInfo->_2).cctor_finished == 0)
-                    {
-                        FUN_1802c5e40();
-                    }
-                    bVar5 = UnityEngine.Object$$op_Implicit((UnityEngine_Object_o*)__this_04, (MethodInfo*)0x0)
-                    ;
-                    if (bVar5)
-                    {
-                        if (__this_04 == (TLD_AI_AiBaseWolf_o*)0x0) goto LAB_180533de2;
-                        TLD.AI.AiBaseWolf$$ProcessHowl(__this_04, (MethodInfo*)0x0);
-                    }
-
-
+                case AiMode.ScratchingAntlers:
+                    ProcessScratchingAntlers();
+                    break;
+                case AiMode.HideAndSeek:
+                    ProcessHideAndSeek();
+                    break;
+                case AiMode.JoinPack:
+                    ProcessJoinPack();
+                    break;
+                case AiMode.Howl:
+                    ProcessHowl();
+                    break;
                 case AiMode.Attack:
-                    mBaseAi.ProcessAttack();
+                    ProcessAttack();
                     break;
-                    //return ProcessAttack();
                 case AiMode.Dead:
                     ProcessDead();
                     break;
@@ -517,6 +319,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void SetDefaultAiMode()
         {
+            Log($"RESetting aimode to {mBaseAi.m_DefaultMode}");
             SetAiMode(mBaseAi.m_DefaultMode);
         }
 
@@ -1092,7 +895,17 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessIdle()
         {
-            mBaseAi.ProcessIdle();
+            mBaseAi.ClearTarget();
+            mBaseAi.ScanForNewTarget();
+            mBaseAi.ScanForSmells();
+            if (mBaseAi.m_CurrentMode != AiMode.Idle || mBaseAi.m_StartMode == AiMode.Idle)
+            {
+                return;
+            }
+            if (mBaseAi.m_TimeInModeSeconds > 10.0f)
+            {
+                SetAiMode(mBaseAi.m_DefaultMode);
+            }
         }
 
 
@@ -1122,7 +935,26 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessSleep()
         {
-            mBaseAi.ProcessSleep();
+            if (!mBaseAi.m_Awake)
+            {
+                if (mBaseAi.m_SleepTimeHours < mBaseAi.m_TimeInModeTODHours)
+                {
+                    if (GameManager.m_Weather.IsBlizzard())
+                    {
+                        mBaseAi.m_TimeInModeTODHours = Mathf.Max(0.0f, mBaseAi.m_SleepTimeHours - 1.0f);
+                    }
+                    else
+                    {
+                        mBaseAi.m_Animator.SetBool(mBaseAi.m_AnimParameter_Sleep, false);
+                        mBaseAi.m_Awake = true;
+                        mBaseAi.m_ExitSleepModeTime = Time.time + 4.0f;
+                    }
+                }
+            }
+            else if (Time.time > mBaseAi.m_ExitSleepModeTime)
+            {
+                SetAiMode(mBaseAi.m_DefaultMode);
+            }
         }
 
 
@@ -1146,13 +978,39 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessWanderPaused()
         {
-            mBaseAi.ProcessWanderPaused();
+            if (mBaseAi.IsImposter())
+            {
+                SetAiMode(mBaseAi.m_DefaultMode);
+                return;
+            }
+
+            if (mBaseAi.m_FailsafeExitTime > 0.0f)
+            {
+                mBaseAi.m_FailsafeExitTime -= Time.deltaTime;
+                if (mBaseAi.m_FailsafeExitTime <= 0.0)
+                {
+                    GameManager.m_AuroraManager.AuroraIsActive();
+                    SetAiMode(mBaseAi.m_DefaultMode);
+                    return;
+                }
+            }
+            mBaseAi.ScanForNewTarget();
+            mBaseAi.MaybeHoldGroundAuroraField();
         }
 
 
         protected virtual void ProcessGoToPoint()
         {
-            mBaseAi.ProcessGoToPoint();
+            mBaseAi.StartPath(mBaseAi.m_GoToPoint, mBaseAi.m_GotoPointMovementSpeed);
+            if (mBaseAi.m_State == State.Pathfinding && mBaseAi.m_MoveAgent.m_DestinationReached)
+            {
+                mBaseAi.m_State = State.Blending;
+            }
+            if (mBaseAi.m_State == State.Blending)
+            {
+                mBaseAi.m_State = State.Finished;
+                SetAiMode(mBaseAi.m_TargetMode);
+            }
         }
 
 
