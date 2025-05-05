@@ -14,6 +14,7 @@ using ModSettings;
 using UnityEngine.Playables;
 using HarmonyLib;
 using UnityEngine.Rendering.PostProcessing;
+using static UnityEngine.SendMouseEvents;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -38,15 +39,76 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public virtual void UnAugment() { }
 
 
-        public void ProcessCurrentAiMode()
+        public virtual void Update()
         {
 #if DEV_BUILD
             try
             {
 #endif
-                if (!PreProcess()) return;
-                if (!Process()) return;
-                PostProcess();
+                if (GameManager.m_IsPaused)
+                {
+                    return;
+                }
+                if (GameManager.s_IsGameplaySuspended)
+                {
+                    return;
+                }
+                if (GameManager.s_IsAISuspended)
+                {
+                    return;
+                }
+                //early out for process dead i guess?
+                if ((!mBaseAi.IsMoveAgent() || !mBaseAi.m_MoveAgent.enabled && !mBaseAi.m_NavMeshAgent) && (!mBaseAi.m_FirstFrame && mBaseAi.m_CurrentMode == AiMode.Dead))
+                {
+                    ProcessDead();
+                    return;
+
+                }
+
+                //Another early-out for death!
+                if (mBaseAi.m_ForceToCorpse)
+                {
+                    mBaseAi.m_CurrentHP = 0.0f;
+                    mBaseAi.StickPivotToGround();
+                    mBaseAi.SetAiMode(AiMode.Dead);
+                    if (mBaseAi.GetHitInfoUnderPivot(out RaycastHit hitInfo))
+                    {
+                        mBaseAi.AlignTransformWithNormal(hitInfo.point, hitInfo.normal, mBaseAi.m_CurrentMode != AiMode.Dead, true);
+                    }
+                    mBaseAi.m_ForceToCorpse = false;
+                    GameAudioManager.StopAllSoundsFromGameObject(mBaseAi.gameObject);
+                }
+                if (mBaseAi.m_FirstFrame)
+                {
+                    if (mBaseAi.m_CurrentMode != AiMode.Dead)
+                    {
+                        mBaseAi.StickCharacterControllerToGround();
+                        if (mBaseAi.GetHitInfoUnderCharacterController(out RaycastHit hitInfo, FindGroundType.FirstTime))
+                        {
+                            mBaseAi.AlignTransformWithNormal(hitInfo.point, hitInfo.normal, mBaseAi.m_CurrentMode != AiMode.Dead, true);
+                        }
+                    }
+                    mBaseAi.DoCustomModeModifiers();
+                    mBaseAi.m_FirstFrame = false;
+                }
+                if (!mBaseAi.IsImposter() && mBaseAi.m_ImposterAnimatorDisabled)
+                {
+                    mBaseAi.m_ImposterAnimatorDisabled = false;
+                    mBaseAi.m_Animator.cullingMode = mBaseAi.m_ImposterCullingMode;
+                }
+                else if (!mBaseAi.m_ImposterAnimatorDisabled)
+                {
+                    mBaseAi.m_ImposterCullingMode = mBaseAi.m_Animator.cullingMode;
+                    mBaseAi.m_Animator.cullingMode = AnimatorCullingMode.CullCompletely;
+                    mBaseAi.m_ImposterAnimatorDisabled = true;
+                }
+                mBaseAi.Timberwolf?.MaybeForceHideAndSeek();
+                ProcessCurrentAiMode();
+                mBaseAi.UpdateAnim();
+                if (CurrentTarget != null)
+                {
+                    CurrentTarget.m_BaseAiTargetingMe = mBaseAi;
+                }
 #if DEV_BUILD
             }
             catch (Exception e)
@@ -61,6 +123,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 
         #region Core methods
+
+
+        protected virtual void ProcessCurrentAiMode()
+        {
+            if (!PreProcess()) return;
+            if (!Process()) return;
+            PostProcess();
+        }
+
 
         protected virtual bool PreProcess()
         {

@@ -77,6 +77,8 @@
     <Reference Include="UnityEngine.AssetBundleModule" />
     <Reference Include="UnityEngine.CoreModule" />
     <Reference Include="UnityEngine" />
+    <Reference Include="UnityEngine.AIModule" />
+    <Reference Include="UnityEngine.AnimationModule" />
     <Reference Include="UnityEngine.PhysicsModule" />
     <Reference Include="UnityEngine.InputLegacyModule" />
     <Reference Include="UnityEngine.InputModule" />

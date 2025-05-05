@@ -243,13 +243,13 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        public bool TryProcessCurrentAiMode(BaseAi baseAi)
+        public bool TryUpdate(BaseAi baseAi)
         {
-            if (!AiAugments.ContainsKey(baseAi.GetHashCode()))
+            if (!AiAugments.TryGetValue(baseAi.GetHashCode(), out ICustomAi ai))
             {
                 return false;
             }
-            AiAugments[baseAi.GetHashCode()].ProcessCurrentAiMode();
+            ai.Update();
             return true;
         }
 
@@ -355,6 +355,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public static string BaseAiInfo(BaseAi baseAi)
         {
             return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}] at {baseAi?.gameObject?.transform?.position ?? Vector3.zero}";
+        }
+
+
+        public static string GetStackTrace()
+        {
+            return UnityEngine.StackTraceUtility.ExtractStackTrace();
         }
 
         #endregion

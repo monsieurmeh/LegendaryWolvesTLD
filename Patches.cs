@@ -56,8 +56,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        [HarmonyPatch(typeof(BaseAi), "ProcessCurrentAiMode")]
-        internal class BaseAiPatches_ProcessCurrentAiMode
+        [HarmonyPatch(typeof(BaseAi), "Update")]
+        internal class BaseAiPatches_Update
         {
             internal struct StateData
             {
@@ -74,6 +74,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
 
             public static bool Prefix(BaseAi __instance
+#if DEV_BUILD
 #if DEV_BUILD_PROFILE
 
                 , ref StateData __state
@@ -90,8 +91,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     __state = new StateData(__instance.GetHashCode(), DateTime.Now.Ticks, __instance.gameObject?.name ?? "null");
 
 #endif
-                    bool success = !Manager.TryProcessCurrentAiMode(__instance);
-
+#endif
+                    bool success = !Manager.TryUpdate(__instance);
 #if DEV_BUILD_PROFILE
                     Manager.LogCustomCycleTime(__state.mId, DateTime.Now.Ticks - __state.mStartTime, __state.mName);
                     __state =  new StateData(__state.mId, DateTime.Now.Ticks, __state.mName);
@@ -101,10 +102,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 }
                 catch (Exception e)
                 {
-                    LogError($"Error during BaseAi.ProcessCurrentAiMode.Prefix: {e}");
+                    LogError($"Error during BaseAi.Update.Prefix: {e}");
                     return false;
                 }
-#endif
             }
 
 #if DEV_BUILD_PROFILE
@@ -112,6 +112,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 Manager.LogBaseCycleTime(__state.mId, DateTime.Now.Ticks - __state.mStartTime, __state.mName);
             }
+#endif
 #endif
         }
 
