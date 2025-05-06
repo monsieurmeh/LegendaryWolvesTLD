@@ -3,11 +3,16 @@
 //#define DEV_BUILD_PROFILE
 //#define DEV_BUILD_SPAWNONE
 //#define DEV_BUILD_LOG_VERBOSE
+#define DEV_BUILD_STATELABEL
 
 using Il2Cpp;
 using Il2CppInterop.Runtime.Injection;
 using Il2CppNodeCanvas.Tasks.Conditions;
 using Il2CppTLD.AI;
+using Il2CppTMPro;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
@@ -53,7 +58,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 #if DEV_BUILD_SPAWNONE
         private bool mSpawnedOne = false;
-#endif 
+#endif
 
         private Dictionary<int, ICustomAi> mAiAugments;
 
@@ -201,7 +206,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         // for now, just wolves... name of the mod, after all.
         public bool TryAugment(BaseAi baseAi, float augmentValue)
         {
-            if (baseAi == null)
+            if (baseAi == null) 
             {
                 return false;
             }
@@ -374,6 +379,5 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public static void Log(BaseAi baseAi, string msg, bool error = false) => LegendaryWolvesManager.Instance.Log(baseAi, msg, error);
         public static void LogError(string msg) => Log(msg, true);
         public static void LogError(BaseAi baseAi, string msg) => Log(baseAi, msg, true);
-
     }
 }

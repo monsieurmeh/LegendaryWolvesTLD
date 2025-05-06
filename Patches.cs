@@ -55,6 +55,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
         }
 
+        
 
         [HarmonyPatch(typeof(BaseAi), "Update")]
         internal class BaseAiPatches_Update

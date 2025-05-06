@@ -15,6 +15,10 @@ using UnityEngine.Playables;
 using HarmonyLib;
 using UnityEngine.Rendering.PostProcessing;
 using static UnityEngine.SendMouseEvents;
+using Il2CppSystem.Security.Util;
+using Il2CppNodeCanvas.Tasks.Actions;
+using static Il2Cpp.UIRoot;
+using static MelonLoader.bHaptics;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -28,12 +32,52 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #region ICustomAi
 
         protected BaseAi mBaseAi;
+        public Transform mMarkerTransform;
+        public Renderer mMarkerRenderer;
 
         public BaseAi BaseAi { get { return mBaseAi; } }
         public virtual WolfTypes WolfType { get { return WolfTypes.Default; } }
+        
+
+        public virtual void Augment() 
+        {
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            marker.transform.localScale = Vector3.one * 1f;
+            marker.GetComponent<Collider>().enabled = false;
+            GameObject.Destroy(marker.GetComponent<Collider>());
+            mMarkerTransform = marker.transform;
+            mMarkerTransform.SetParent(mBaseAi.transform);
+            mMarkerTransform.position = mBaseAi.transform.position;
+            mMarkerRenderer = marker.GetComponent<Renderer>();
+        }
 
 
-        public virtual void Augment() { }
+        public void SetMarkerColor()
+        {
+            mMarkerRenderer.material.color = GetMarkerColor();
+        }
+
+
+        public Color GetMarkerColor()
+        {
+            //mMarkerRenderer.gameObject.active = true;
+            switch (CurrentMode)
+            {
+                case AiMode.Attack:
+                    return Color.red;
+                case AiMode.PassingAttack:
+                    return Color.cyan;
+                case AiMode.HideAndSeek:
+                    return Color.green;
+                case AiMode.Stalking:
+                    return Color.black;
+                case AiMode.HoldGround:
+                    return Color.blue;
+                default:
+                    //mMarkerRenderer.gameObject.active = false;
+                    return Color.clear;
+            }
+        }
 
 
         public virtual void UnAugment() { }
@@ -45,6 +89,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             try
             {
 #endif
+                mMarkerRenderer.material.color = GetMarkerColor();
                 if (GameManager.m_IsPaused)
                 {
                     return;
@@ -56,7 +101,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 if (GameManager.s_IsAISuspended)
                 {
                     return;
-                }   
+                }
                 if ((!mBaseAi.IsMoveAgent() || !mBaseAi.m_MoveAgent.enabled && !mBaseAi.m_NavMeshAgent) && (!mBaseAi.m_FirstFrame && mBaseAi.m_CurrentMode == AiMode.Dead))
                 {
                     ProcessDead();
@@ -124,9 +169,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected void ProcessCurrentAiMode()
         {
+            //mBaseAi.ProcessCommonPre();
             PreProcess();
             Process();
             PostProcess();
+            //mBaseAi.ProcessCommonPost();
         }
 
 
@@ -165,7 +212,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             if (mBaseAi.m_CurrentMode != AiMode.Dead)
             {
                 mBaseAi.MaybeRestoreTargetAfterSpear();
-                mBaseAi.MaybeHoldGround();
+                MaybeHoldGround();
                 mBaseAi.MaybeAttemptDodge();
                 mBaseAi.UpdateWounds(Time.deltaTime);
                 mBaseAi.m_SuppressFootStepDetectionAndSmellSecondsRemaining -= Time.deltaTime;
@@ -302,6 +349,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #region Helpers
 
         protected AiTarget CurrentTarget { get { return mBaseAi.m_CurrentTarget; } }
+        protected AiMode CurrentMode { get { return mBaseAi.m_CurrentMode; } }
 
         protected virtual void ClearTargetAndSetDefaultAiMode()
         {
@@ -370,35 +418,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected virtual bool CanReachTarget(Vector3 targetPosition)
         {
             return mBaseAi.CanPlayerBeReached(targetPosition);
-        }
-
-
-        protected virtual bool MaybeHoldGroundForAttackCustom(HoldGroundReason reason, Func<float, bool> shouldHoldGroundFunc)
-        {
-            if (mBaseAi == null || mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
-                return false;
-
-            if (!TryGetInnerRadiusForHoldGroundCause(reason, out float innerRadius))
-                return false;
-
-            if (!TryGetOuterRadiusForHoldGroundCause(reason, out float outerRadius))
-                return false;
-
-            bool allowSlowdown = BaseAi.m_AllowSlowdownForHold;
-
-            if (shouldHoldGroundFunc.Invoke(innerRadius))
-            {
-                mBaseAi.m_HoldGroundReason = reason;
-                SetAiMode(AiMode.HoldGround);
-                return true;
-            }
-
-            if (allowSlowdown && shouldHoldGroundFunc.Invoke(outerRadius))
-            {
-                mBaseAi.m_HoldGroundReason = reason;
-                RefreshTargetPosition();
-            }
-            return false;
         }
 
 
@@ -549,7 +568,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
             {
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Spear, MaybeHoldGroundForSpear))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.Spear, MaybeHoldGroundForSpear))
                 {
                     //Log($"[ProcessAttack] Holding ground due spear threat, aborting...");
                     return true;
@@ -557,12 +576,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
             {
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Torch, (radius) => mBaseAi.MaybeHoldGroundForTorch(radius)))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.Torch, (radius) => mBaseAi.MaybeHoldGroundForTorch(radius)))
                 {
                     //Log($"[ProcessAttack] Holding ground due torch, aborting...");
                     return true;
                 }
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.TorchOnGround, (radius) => mBaseAi.MaybeHoldGroundForTorchOnGround(radius)))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.TorchOnGround, (radius) => mBaseAi.MaybeHoldGroundForTorchOnGround(radius)))
                 {
                     //Log($"[ProcessAttack] Holding ground due to torch on ground, aborting...");
                     return true;
@@ -570,12 +589,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
             {
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.RedFlare, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.RedFlare, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
                 {
                     //Log($"[ProcessAttack] Holding due to red flare, aborting...");
                     return true;
                 }
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.RedFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForRedFlareOnGround(radius)))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.RedFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForRedFlareOnGround(radius)))
                 {
                     //Log($"[ProcessAttack] Holding due to red flare on ground, aborting...");
                     return true;
@@ -583,7 +602,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
             {
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.Fire, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.Fire, (radius) => mBaseAi.MaybeHoldGroundForRedFlare(radius)))
                 {
                     //Log($"[ProcessAttack] Holding due to fire, aborting...");
                     return true;
@@ -591,12 +610,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             if (mBaseAi.m_HoldGroundCooldownSeconds < Time.time - mBaseAi.m_LastTimeWasHoldingGround)
             {
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.BlueFlare, (radius) => mBaseAi.MaybeHoldGroundForBlueFlare(radius)))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.BlueFlare, (radius) => mBaseAi.MaybeHoldGroundForBlueFlare(radius)))
                 {
                     //Log($"[ProcessAttack] Holding due to blue flare , aborting...");
                     return true;
                 }
-                if (MaybeHoldGroundForAttackCustom(HoldGroundReason.BlueFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForBlueFlareOnGround(radius)))
+                if (MaybeHoldGroundForAttack(HoldGroundReason.BlueFlareOnGround, (radius) => mBaseAi.MaybeHoldGroundForBlueFlareOnGround(radius)))
                 {
                     //Log($"[ProcessAttack] Holding due to blue flare on ground, aborting...");
                     return true;
@@ -724,7 +743,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #endregion
 
 
-        #region Hinterland Process Overrides
+        #region Hinterland Overrides
+
+        #region Process Overrides
 
         protected virtual void ProcessAttack()
         {
@@ -1067,11 +1088,80 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mBaseAi.BaseWolf?.ProcessHowl();
         }
 
-
         #endregion
 
 
         #region MaybeHoldGround overrides
+
+
+        protected virtual void MaybeHoldGround()
+        {
+            mBaseAi.MaybeHoldGround();
+            /*
+            if (mBaseAi.m_AiType != AiType.Predator)
+            {
+                return;
+            }
+
+            if (!mBaseAi.CanHoldGround())
+            {
+                return;
+            }
+            if (((1U << (int)CurrentMode) & (uint)AiModeFlags.EarlyOutMaybeHoldGround) != 0U)
+            {
+                return;
+            }
+            else if (CurrentMode == AiMode.Attack && mBaseAi.m_IgnoreFlaresAndFireWhenAttacking)
+            {
+                return;
+            }
+
+            bool holdingGround = mBaseAi.MaybeHoldGroundDueToStruggle();
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForFire(m_HoldGroundDistanceFromFire);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForRedFlare(m_HoldGroundDistanceFromFlare);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForRedFlareOnGround(m_HoldGroundDistanceFromFlareOnGround);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForBlueFlare(m_HoldGroundDistanceFromBlueFlare);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForBlueFlareOnGround(m_HoldGroundDistanceFromBlueFlareOnGround);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForTorch(m_HoldGroundDistanceFromTorch); 
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForTorchOnGround(m_HoldGroundDistanceFromTorchOnGround);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForTorch(m_HoldGroundDistanceFromTorch);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForSpear(m_HoldGroundDistanceFromSpear);
+            if (holdingGround)
+            {
+                SetAiMode(AiMode.HoldGround);
+            }
+            */
+        }
+
+
+        protected virtual bool MaybeHoldGroundForAttack(HoldGroundReason reason, Func<float, bool> shouldHoldGroundFunc)
+        {
+            if (mBaseAi == null || mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
+                return false;
+
+            if (!TryGetInnerRadiusForHoldGroundCause(reason, out float innerRadius))
+                return false;
+
+            if (!TryGetOuterRadiusForHoldGroundCause(reason, out float outerRadius))
+                return false;
+
+            bool allowSlowdown = BaseAi.m_AllowSlowdownForHold;
+
+            if (shouldHoldGroundFunc.Invoke(innerRadius))
+            {
+                mBaseAi.m_HoldGroundReason = reason;
+                SetAiMode(AiMode.HoldGround);
+                return true;
+            }
+
+            if (allowSlowdown && shouldHoldGroundFunc.Invoke(outerRadius))
+            {
+                mBaseAi.m_HoldGroundReason = reason;
+                RefreshTargetPosition();
+            }
+            return false;
+        }
+
 
         protected virtual bool MaybeHoldGroundForSpear(float radius)
         {
@@ -1085,7 +1175,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 //Log($"[MaybeHoldGroundForSpear] small check radius, dont stop for spear");
                 return false;
-            }   
+            }
 
             PlayerManager player = GameManager.m_PlayerManager;
 
@@ -1100,7 +1190,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 //Log($"[MaybeHoldGroundForSpear] no item in hands, dont stop for spear");
                 return false;
             }
-
 
             if (player.m_ItemInHandsInternal.m_BearSpearItem == null)
             {
@@ -1139,9 +1228,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         #endregion
 
+        #endregion
+
 
         #region Sub-Processes
-        
+
 
         protected virtual void ProcessStartAttackHowl()
         {
@@ -1161,6 +1252,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 
         #region AI Property Overrides
+
+        //In theory, these should still be affected by other mods which primarily tweak existing fields at awake
+        // In the future if we decide to create new mod-specific default values, we'll need to cache the "official" hinterland version and do our own on start (not awake to ensure that other mods get to it first) check to see if props match HL defaults, and ignore them if not because someone else got to them
 
         protected virtual float m_HoldGroundDistanceFromSpear { get { return mBaseAi.m_HoldGroundDistanceFromSpear; } }
         protected virtual float m_HoldGroundOuterDistanceFromSpear { get { return mBaseAi.m_HoldGroundOuterDistanceFromSpear; } }
