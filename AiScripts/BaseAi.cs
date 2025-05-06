@@ -19,6 +19,8 @@ using Il2CppSystem.Security.Util;
 using Il2CppNodeCanvas.Tasks.Actions;
 using static Il2Cpp.UIRoot;
 using static MelonLoader.bHaptics;
+using Il2CppInterop.Runtime.Runtime;
+using System.Buffers.Text;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -886,7 +888,23 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessDead()
         {
-            mBaseAi.ProcessDead();
+            mBaseAi.MaybeSpawnCarcassSiteIfFarEnough();
+            mBaseAi.m_TimeInDeadMode += Time.deltaTime;
+
+            if (mBaseAi.m_EnableColliderOnDeath && mBaseAi.m_TimeInDeadMode > 5.0f)
+            {
+                mBaseAi.m_EnableColliderOnDeath = false;
+                MatchTransform.EnableCollidersForAllActive(false);
+            }
+
+            if (mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
+            {
+                AuroraManager auroraManager = GameManager.m_AuroraManager;
+                if (auroraManager.m_NormalizedActive <= auroraManager.m_FullyActiveValue)
+                {
+                    mBaseAi.m_AuroraObjectMaterials.SwitchToNormalMaterials();
+                }
+            }
         }
 
 
@@ -898,7 +916,122 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessFlee()
         {
-            mBaseAi.ProcessFlee();
+            if (mBaseAi is not AiStagWhite stag)
+            {
+                if (Utils.PositionIsOnscreen(mBaseAi.m_CachedTransform.position))
+                {
+                    if (Utils.DistanceToMainCamera(mBaseAi.m_CachedTransform.position) > GameManager.m_SpawnRegionManager.m_AllowDespawnOnscreenDistance)
+                    {
+                        if (Utils.PositionIsInLOSOfPlayer(mBaseAi.m_CachedTransform.position))
+                        {
+                            mBaseAi.Despawn();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (mBaseAi.m_GroupFleeLeader != null)
+            {
+                if (mBaseAi.m_GroupFleeLeader.m_CurrentMode != AiMode.Flee && !mBaseAi.m_ExitGroupFleeTimerStarted)
+                {
+                    mBaseAi.m_ExitGroupFleeTimerStarted = true;
+                    mBaseAi.m_ExitGroupFleeTimerSeconds = UnityEngine.Random.Range(0.5f, 1.5f);
+                }
+            }
+
+            if (mBaseAi.m_ExitGroupFleeTimerStarted != false)
+            {
+                mBaseAi.m_ExitGroupFleeTimerSeconds -= Time.deltaTime;
+                if (mBaseAi.m_ExitGroupFleeTimerSeconds <= 0.0)
+                {
+                    SetDefaultAiMode();
+                    return;
+                }
+            }
+
+            if (GameManager.m_Weather.IsIndoorEnvironment())
+            {
+                float distance = Vector3.Distance(mBaseAi.m_CurrentTarget?.transform.position ?? mBaseAi.m_FleeFromPos, mBaseAi.gameObject.transform.position);
+                if (distance > 900.0f)
+                {
+                    SetDefaultAiMode();
+                    return;
+                }
+            }
+
+            if (mBaseAi.MaybeHandleTimeoutFleeing())
+            {
+                return;
+            }
+
+            if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
+            {
+                return;
+            }
+
+
+            //holy mother of redundancies bruh
+            if (!mBaseAi.m_HasPickedForcedFleePos || mBaseAi.m_FleeReason != AiFleeReason.PackMorale)
+            {
+                if (Vector3.Distance(mBaseAi.m_CachedTransform.position, mBaseAi.m_FleeToPos) >= 25.0f)
+                {
+                    if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
+                    {
+                        return;
+                    }
+                }
+
+                if (mBaseAi.m_MoveAgent.HasPath())
+                {
+                    if (Vector3.Dot(Vector3.Normalize(mBaseAi.m_FleeToPos), mBaseAi.m_CachedTransform.position) <= 0.0f)
+                    {
+                        if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
+                        {
+                            return;
+                        }
+                    }
+                }
+                if (!PickFleeDestinationAndTryStartPath())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                if (!PickFleeDestinationAndTryStartPath())
+                {
+                    return;
+                }
+            }
+
+            if (mBaseAi.m_MoveAgent.m_DestinationReached)
+            {
+                mBaseAi.m_PickedFleeDestination = false;
+            }
+
+            if (mBaseAi.m_AiType == AiType.Predator)
+            {
+                mBaseAi.MaybeAttackPlayerWhenTryingToFlee();
+            }
+
+            if (mBaseAi.m_UseRetreatSpeedInFlee)
+            {
+                if (Vector3.Distance(mBaseAi.transform.position, mBaseAi.m_CurrentTarget != null ? mBaseAi.m_CurrentTarget.transform.position : mBaseAi.m_FleeFromPos) < 10.0f)
+                {
+                    mBaseAi.m_UseRetreatSpeedInFlee = false;
+                    mBaseAi.m_AiGoalSpeed = mBaseAi.GetFleeSpeed();
+                }
+            }
+
+            mBaseAi.m_FleeingForSeconds += Time.deltaTime;
+            mBaseAi.m_FleeingForSecondsSinceLastFleeToSpawnPos += Time.deltaTime;
+            mBaseAi.m_WarnOthersTimer -= Time.deltaTime;
+            if (mBaseAi.m_WarnOthersTimer <= 0.0f)
+            {
+                mBaseAi.WarnOthersNearby();
+                mBaseAi.m_WarnOthersTimer = mBaseAi.m_GroupFleeRepeatDetectSeconds;
+            }
         }
 
 
@@ -1242,6 +1375,25 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected virtual void ProcessTargetDead()
         {
             ClearTargetAndSetDefaultAiMode();
+        }
+
+
+        protected virtual bool PickFleeDestinationAndTryStartPath()
+        {
+            if (!mBaseAi.PickFleeDesination(out Vector3 fleePos))
+            {
+                return false;
+            }
+            float fleeSpeed = mBaseAi.GetFleeSpeed();
+            bool startedPath = mBaseAi.StartPath(fleePos, fleeSpeed);
+            if (!startedPath)
+            {
+                mBaseAi.SetAiMode(mBaseAi.m_DefaultMode);
+                return false;
+            }
+            mBaseAi.m_FleeToPos = fleePos;
+            mBaseAi.m_PickedFleeDestination = true;
+            return true;
         }
 
         #endregion
