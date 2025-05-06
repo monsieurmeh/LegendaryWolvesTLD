@@ -295,7 +295,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     break;
                 case AiMode.InteractWithProp:
                     ProcessInteractWithProp();
-                    break;
+                    break; 
                 case AiMode.ScriptedSequence:
                     ProcessScriptedSequence();
                     break;
@@ -350,8 +350,17 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         #region Helpers
 
+        public static float SquaredDistance(Vector3 a, Vector3 b)
+        {
+            return ((a.x - b.x) * (a.x - b.x)) + ((a.y - b.y) * (a.y - b.y)) + ((a.z - b.z) * (a.z - b.z));
+        }
+
+
         protected AiTarget CurrentTarget { get { return mBaseAi.m_CurrentTarget; } }
         protected AiMode CurrentMode { get { return mBaseAi.m_CurrentMode; } }
+
+   
+
 
         protected virtual void ClearTargetAndSetDefaultAiMode()
         {
@@ -360,16 +369,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             return;
         }
 
+
         protected virtual void SetAiMode(AiMode mode)
         {
-            Log($"Setting aimode to {mode}");
             mBaseAi.SetAiMode(mode);
         }
 
 
         protected virtual void SetDefaultAiMode()
         {
-            Log($"RESetting aimode to {mBaseAi.m_DefaultMode}");
             SetAiMode(mBaseAi.m_DefaultMode);
         }
 
@@ -911,23 +919,23 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mBaseAi.ProcessFeeding();
         }
 
-        //This method is broken. I thought it was working fine but a series of tests I ran it seems the "new" ai didnt engage, so I moved on from this one without fully vetting it. Need to test it solo tomorrow, im tired.
+
         protected virtual void ProcessFlee()
         {
-            if (mBaseAi is not AiStagWhite stag)
+            //Considering putting a timer on this one, it seems expensive to check all this each frame for what, a despawn check? could absolutely be done on a timed frequency without affecting gameplay substantially
+            Vector3 position = mBaseAi.m_CachedTransform.position;
+            if (Utils.PositionIsOnscreen(position, 0.02f))
             {
-                if (Utils.PositionIsOnscreen(mBaseAi.m_CachedTransform.position))
+                if (Utils.DistanceToMainCamera(position) > GameManager.m_SpawnRegionManager.m_AllowDespawnOnscreenDistance)
                 {
-                    if (Utils.DistanceToMainCamera(mBaseAi.m_CachedTransform.position) > GameManager.m_SpawnRegionManager.m_AllowDespawnOnscreenDistance)
+                    if (!Utils.PositionIsInLOSOfPlayer(position))
                     {
-                        if (Utils.PositionIsInLOSOfPlayer(mBaseAi.m_CachedTransform.position))
-                        {
-                            mBaseAi.Despawn();
-                            return;
-                        }
+                        mBaseAi.Despawn();
+                        return;
                     }
                 }
             }
+
             if (mBaseAi.m_GroupFleeLeader != null)
             {
                 if (mBaseAi.m_GroupFleeLeader.m_CurrentMode != AiMode.Flee && !mBaseAi.m_ExitGroupFleeTimerStarted)
@@ -936,81 +944,91 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     mBaseAi.m_ExitGroupFleeTimerSeconds = UnityEngine.Random.Range(0.5f, 1.5f);
                 }
             }
-            if (mBaseAi.m_ExitGroupFleeTimerStarted != false)
+
+            if (mBaseAi.m_ExitGroupFleeTimerStarted)
             {
                 mBaseAi.m_ExitGroupFleeTimerSeconds -= Time.deltaTime;
                 if (mBaseAi.m_ExitGroupFleeTimerSeconds <= 0.0)
                 {
+                    Log("Exiting group flee, resetting to default mode");
                     SetDefaultAiMode();
                     return;
                 }
             }
-            if (GameManager.m_Weather.IsIndoorEnvironment())
+
+            if (GameManager.m_Weather.IsIndoorEnvironment() && SquaredDistance(mBaseAi.m_CurrentTarget?.transform.position ?? mBaseAi.m_FleeFromPos, mBaseAi.gameObject.transform.position) > 900.0f)
             {
-                float distance = Vector3.Distance(mBaseAi.m_CurrentTarget?.transform.position ?? mBaseAi.m_FleeFromPos, mBaseAi.gameObject.transform.position);
-                if (distance > 900.0f)
-                {
-                    SetDefaultAiMode();
-                    return;
-                }
+                Log("Indoor environment and sqrdist(ai, target) > 900.0f, resetting to default mode");
+                SetDefaultAiMode();
+                return;
             }
+
+            if (!mBaseAi.KeepFleeingFromTarget())
+            {
+                Log("Should no longer flee, resetting to default mode...");
+                SetDefaultAiMode();
+                return;
+            }
+
             if (mBaseAi.MaybeHandleTimeoutFleeing())
-                return;
-
-            if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
-                return;
-
-
-            //holy mother of redundancies bruh
-            if (!mBaseAi.m_HasPickedForcedFleePos || mBaseAi.m_FleeReason != AiFleeReason.PackMorale)
             {
-                if (Vector3.Distance(mBaseAi.m_CachedTransform.position, mBaseAi.m_FleeToPos) >= 25.0f)
-                {
-                    if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
-                        return;
-                }
+                Log("Flee time out, returning without resetting mode");
+                return; 
+            }
 
-                if (mBaseAi.m_MoveAgent.HasPath())
+            if (!mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath("First check"))
+            {
+                return;
+            }
+
+            if ((!mBaseAi.m_HasPickedForcedFleePos) || (mBaseAi.m_FleeReason != AiFleeReason.PackMorale))
+            {
+                if (SquaredDistance(mBaseAi.m_FleeToPos, mBaseAi.m_CachedTransform.position) > 25.0f && !mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath($"sqr dist of {SquaredDistance(mBaseAi.m_FleeToPos, mBaseAi.m_CachedTransform.position)} > 25.0 check"))
                 {
-                    if (Vector3.Dot(Vector3.Normalize(mBaseAi.m_FleeToPos), mBaseAi.m_CachedTransform.position) <= 0.0f)
-                    {
-                        if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
-                            return;
-                    }
-                }
-                if (!PickFleeDestinationAndTryStartPath())
                     return;
+                }
+                if (mBaseAi.m_MoveAgent.HasPath() && Vector3.Dot(Vector3.Normalize(mBaseAi.m_FleeToPos - mBaseAi.m_CachedTransform.position), mBaseAi.m_CachedTransform.forward) <= 0.0f && !mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath($"Dot product check"))
+                {
+                    return;
+                }
             }
             else
             {
-                if (!PickFleeDestinationAndTryStartPath())
+                if (!mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath($"4th check"))
+                {
                     return;
+                }
             }
-            
 
             if (mBaseAi.m_MoveAgent.m_DestinationReached)
             {
+
                 mBaseAi.m_PickedFleeDestination = false;
             }
+
             if (mBaseAi.m_AiType == AiType.Predator)
             {
                 mBaseAi.MaybeAttackPlayerWhenTryingToFlee();
             }
-            if (mBaseAi.m_UseRetreatSpeedInFlee)
+
+            //should we be using a cached position here instead of the actual current position for BaseAi?
+            if (mBaseAi.m_UseRetreatSpeedInFlee && Vector3.Distance(mBaseAi.transform.position, mBaseAi.m_CurrentTarget?.transform.position ?? mBaseAi.m_FleeFromPos) < 10.0f)
             {
-                if (Vector3.Distance(mBaseAi.transform.position, mBaseAi.m_CurrentTarget != null ? mBaseAi.m_CurrentTarget.transform.position : mBaseAi.m_FleeFromPos) < 10.0f)
-                {
-                    mBaseAi.m_UseRetreatSpeedInFlee = false;
-                    mBaseAi.m_AiGoalSpeed = mBaseAi.GetFleeSpeed();
-                }
+                mBaseAi.m_UseRetreatSpeedInFlee = false;
+                mBaseAi.m_AiGoalSpeed = mBaseAi.GetFleeSpeed();
             }
+
             mBaseAi.m_FleeingForSeconds += Time.deltaTime;
             mBaseAi.m_FleeingForSecondsSinceLastFleeToSpawnPos += Time.deltaTime;
-            mBaseAi.m_WarnOthersTimer -= Time.deltaTime;
-            if (mBaseAi.m_WarnOthersTimer <= 0.0f)
+
+            if (mBaseAi.m_GroupFleeLeader != null)
             {
-                mBaseAi.WarnOthersNearby();
-                mBaseAi.m_WarnOthersTimer = mBaseAi.m_GroupFleeRepeatDetectSeconds;
+                mBaseAi.m_WarnOthersTimer -= Time.deltaTime;
+                if (mBaseAi.m_WarnOthersTimer < 0.0f)
+                {
+                    mBaseAi.WarnOthersNearby();
+                    mBaseAi.m_WarnOthersTimer = mBaseAi.m_GroupFleeRepeatDetectSeconds;
+                }
             }
         }
 
@@ -1530,21 +1548,20 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected virtual bool PickFleeDestinationAndTryStartPath()
+        //returns true if calling method should continue, false if early out
+        protected virtual bool PickFleeDestinationAndTryStartPath(string context)
         {
-            if (!mBaseAi.PickFleeDesination(out Vector3 fleePos))
+            if (mBaseAi.PickFleeDesination(out Vector3 fleePos))
             {
-                return false;
+                if (!mBaseAi.StartPath(fleePos, mBaseAi.GetFleeSpeed()))
+                {
+                    SetDefaultAiMode();
+                    return false;
+                }
+                Log($"[{context}] Picked new flee position {fleePos} which is {Vector3.Distance(fleePos, mBaseAi.m_CachedTransform.position)} away");
+                mBaseAi.m_FleeToPos = fleePos;
+                mBaseAi.m_PickedFleeDestination = true;
             }
-            float fleeSpeed = mBaseAi.GetFleeSpeed();
-            bool startedPath = mBaseAi.StartPath(fleePos, fleeSpeed);
-            if (!startedPath)
-            {
-                mBaseAi.SetAiMode(mBaseAi.m_DefaultMode);
-                return false;
-            }
-            mBaseAi.m_FleeToPos = fleePos;
-            mBaseAi.m_PickedFleeDestination = true;
             return true;
         }
 
