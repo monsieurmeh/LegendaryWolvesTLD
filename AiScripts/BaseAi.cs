@@ -1037,7 +1037,49 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessFollowWaypoints()
         {
-            mBaseAi.ProcessFollowWaypoints();
+            if (!mBaseAi.m_HasEnteredFollowWaypoints)
+            {
+                mBaseAi.EnterFollowWaypoints();
+                mBaseAi.m_HasEnteredFollowWaypoints = true;
+            }
+
+            if (mBaseAi.m_TargetWaypointIndex == -1 ||
+                mBaseAi.m_TargetWaypointIndex >= mBaseAi.m_Waypoints.Count)
+            {
+                mBaseAi.ScanForNewTarget();
+                mBaseAi.ScanForSmells();
+                mBaseAi.MaybeEnterWanderPause();
+                return;
+            }
+
+            if (Vector3.Distance(mBaseAi.m_CachedTransform.position, mBaseAi.m_Waypoints[mBaseAi.m_TargetWaypointIndex]) >= 1.0f)
+            {
+                if (!mBaseAi.m_MoveAgent.m_DestinationReached)
+                {
+                    mBaseAi.ScanForNewTarget();
+                    mBaseAi.ScanForSmells();
+                    mBaseAi.MaybeEnterWanderPause();
+                    return;
+                }
+            }
+
+            if (mBaseAi.m_Waypoints != null &&
+                mBaseAi.m_TargetWaypointIndex < mBaseAi.m_Waypoints.Length)
+            {
+                mBaseAi.MaybeWander();
+                mBaseAi.m_TargetWaypointIndex++;
+
+                if (mBaseAi.m_TargetWaypointIndex >= mBaseAi.m_Waypoints.Length)
+                {
+                    mBaseAi.HandleLastWaypoint();
+                }
+
+                mBaseAi.PathfindToWaypoint(mBaseAi.m_TargetWaypointIndex);
+            }
+
+            mBaseAi.ScanForNewTarget();
+            mBaseAi.ScanForSmells();
+            mBaseAi.MaybeEnterWanderPause();
         }
 
 
