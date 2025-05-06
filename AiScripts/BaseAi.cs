@@ -1096,8 +1096,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void MaybeHoldGround()
         {
-            mBaseAi.MaybeHoldGround();
-            /*
             if (mBaseAi.m_AiType != AiType.Predator)
             {
                 return;
@@ -1116,21 +1114,19 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 return;
             }
 
-            bool holdingGround = mBaseAi.MaybeHoldGroundDueToStruggle();
+            bool holdingGround = mBaseAi.MaybeHoldGroundForTorch(m_HoldGroundDistanceFromTorch);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForTorchOnGround(m_HoldGroundDistanceFromTorchOnGround);
             holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForFire(m_HoldGroundDistanceFromFire);
             holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForRedFlare(m_HoldGroundDistanceFromFlare);
             holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForRedFlareOnGround(m_HoldGroundDistanceFromFlareOnGround);
             holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForBlueFlare(m_HoldGroundDistanceFromBlueFlare);
             holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForBlueFlareOnGround(m_HoldGroundDistanceFromBlueFlareOnGround);
-            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForTorch(m_HoldGroundDistanceFromTorch); 
-            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForTorchOnGround(m_HoldGroundDistanceFromTorchOnGround);
-            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForTorch(m_HoldGroundDistanceFromTorch);
             holdingGround = holdingGround || mBaseAi.MaybeHoldGroundForSpear(m_HoldGroundDistanceFromSpear);
+            holdingGround = holdingGround || mBaseAi.MaybeHoldGroundDueToStruggle();
             if (holdingGround)
             {
-                SetAiMode(AiMode.HoldGround);
+                SetAiMode(AiMode.HoldGround); 
             }
-            */
         }
 
 
