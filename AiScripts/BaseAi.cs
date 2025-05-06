@@ -890,13 +890,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             mBaseAi.MaybeSpawnCarcassSiteIfFarEnough();
             mBaseAi.m_TimeInDeadMode += Time.deltaTime;
-
             if (mBaseAi.m_EnableColliderOnDeath && mBaseAi.m_TimeInDeadMode > 5.0f)
             {
                 mBaseAi.m_EnableColliderOnDeath = false;
                 MatchTransform.EnableCollidersForAllActive(false);
             }
-
             if (mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
             {
                 AuroraManager auroraManager = GameManager.m_AuroraManager;
@@ -913,7 +911,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mBaseAi.ProcessFeeding();
         }
 
-
+        //This method is broken. I thought it was working fine but a series of tests I ran it seems the "new" ai didnt engage, so I moved on from this one without fully vetting it. Need to test it solo tomorrow, im tired.
         protected virtual void ProcessFlee()
         {
             if (mBaseAi is not AiStagWhite stag)
@@ -930,7 +928,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     }
                 }
             }
-
             if (mBaseAi.m_GroupFleeLeader != null)
             {
                 if (mBaseAi.m_GroupFleeLeader.m_CurrentMode != AiMode.Flee && !mBaseAi.m_ExitGroupFleeTimerStarted)
@@ -939,7 +936,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     mBaseAi.m_ExitGroupFleeTimerSeconds = UnityEngine.Random.Range(0.5f, 1.5f);
                 }
             }
-
             if (mBaseAi.m_ExitGroupFleeTimerStarted != false)
             {
                 mBaseAi.m_ExitGroupFleeTimerSeconds -= Time.deltaTime;
@@ -949,7 +945,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     return;
                 }
             }
-
             if (GameManager.m_Weather.IsIndoorEnvironment())
             {
                 float distance = Vector3.Distance(mBaseAi.m_CurrentTarget?.transform.position ?? mBaseAi.m_FleeFromPos, mBaseAi.gameObject.transform.position);
@@ -959,16 +954,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     return;
                 }
             }
-
             if (mBaseAi.MaybeHandleTimeoutFleeing())
-            {
                 return;
-            }
 
             if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
-            {
                 return;
-            }
 
 
             //holy mother of redundancies bruh
@@ -977,9 +967,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 if (Vector3.Distance(mBaseAi.m_CachedTransform.position, mBaseAi.m_FleeToPos) >= 25.0f)
                 {
                     if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
-                    {
                         return;
-                    }
                 }
 
                 if (mBaseAi.m_MoveAgent.HasPath())
@@ -987,34 +975,27 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     if (Vector3.Dot(Vector3.Normalize(mBaseAi.m_FleeToPos), mBaseAi.m_CachedTransform.position) <= 0.0f)
                     {
                         if (!mBaseAi.m_PickedFleeDestination && PickFleeDestinationAndTryStartPath())
-                        {
                             return;
-                        }
                     }
                 }
                 if (!PickFleeDestinationAndTryStartPath())
-                {
                     return;
-                }
             }
             else
             {
                 if (!PickFleeDestinationAndTryStartPath())
-                {
                     return;
-                }
             }
+            
 
             if (mBaseAi.m_MoveAgent.m_DestinationReached)
             {
                 mBaseAi.m_PickedFleeDestination = false;
             }
-
             if (mBaseAi.m_AiType == AiType.Predator)
             {
                 mBaseAi.MaybeAttackPlayerWhenTryingToFlee();
             }
-
             if (mBaseAi.m_UseRetreatSpeedInFlee)
             {
                 if (Vector3.Distance(mBaseAi.transform.position, mBaseAi.m_CurrentTarget != null ? mBaseAi.m_CurrentTarget.transform.position : mBaseAi.m_FleeFromPos) < 10.0f)
@@ -1023,7 +1004,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     mBaseAi.m_AiGoalSpeed = mBaseAi.GetFleeSpeed();
                 }
             }
-
             mBaseAi.m_FleeingForSeconds += Time.deltaTime;
             mBaseAi.m_FleeingForSecondsSinceLastFleeToSpawnPos += Time.deltaTime;
             mBaseAi.m_WarnOthersTimer -= Time.deltaTime;
@@ -1042,7 +1022,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 mBaseAi.EnterFollowWaypoints();
                 mBaseAi.m_HasEnteredFollowWaypoints = true;
             }
-
             if (mBaseAi.m_TargetWaypointIndex == -1 ||
                 mBaseAi.m_TargetWaypointIndex >= mBaseAi.m_Waypoints.Count)
             {
@@ -1051,7 +1030,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 mBaseAi.MaybeEnterWanderPause();
                 return;
             }
-
             if (Vector3.Distance(mBaseAi.m_CachedTransform.position, mBaseAi.m_Waypoints[mBaseAi.m_TargetWaypointIndex]) >= 1.0f)
             {
                 if (!mBaseAi.m_MoveAgent.m_DestinationReached)
@@ -1062,21 +1040,13 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     return;
                 }
             }
-
-            if (mBaseAi.m_Waypoints != null &&
-                mBaseAi.m_TargetWaypointIndex < mBaseAi.m_Waypoints.Length)
+            mBaseAi.MaybeWander();
+            mBaseAi.m_TargetWaypointIndex++;
+            if (mBaseAi.m_TargetWaypointIndex >= mBaseAi.m_Waypoints.Length)
             {
-                mBaseAi.MaybeWander();
-                mBaseAi.m_TargetWaypointIndex++;
-
-                if (mBaseAi.m_TargetWaypointIndex >= mBaseAi.m_Waypoints.Length)
-                {
-                    mBaseAi.HandleLastWaypoint();
-                }
-
-                mBaseAi.PathfindToWaypoint(mBaseAi.m_TargetWaypointIndex);
+                mBaseAi.HandleLastWaypoint();
             }
-
+            mBaseAi.PathfindToWaypoint(mBaseAi.m_TargetWaypointIndex);
             mBaseAi.ScanForNewTarget();
             mBaseAi.ScanForSmells();
             mBaseAi.MaybeEnterWanderPause();
@@ -1085,7 +1055,149 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessHoldGround()
         {
-            mBaseAi.ProcessHoldGround();
+            AiUtils.TurnTowardsTarget(mBaseAi);
+            mBaseAi.HoldGroundFightOrFlight();
+            if (CurrentMode != AiMode.HoldGround)
+            {
+                return;
+            }
+
+            bool b1 = false;
+            bool b2 = false;
+
+            if (mBaseAi.m_DelayStopHoldGroundTimers && !GameManager.m_TimeOfDay.IsTimeLapseActive())
+            { 
+                mBaseAi.SetStopHoldGroundTimers();
+                mBaseAi.m_DelayStopHoldGroundTimers = false;
+            }
+
+            if (mBaseAi.MaybeHoldGroundForRedFlare(m_HoldGroundDistanceFromFlare) || mBaseAi.MaybeHoldGroundForRedFlareOnGround(m_HoldGroundDistanceFromFlareOnGround))
+            {
+                mBaseAi.HoldGroundCommon(mBaseAi.m_TimeToStopHoldingGroundDueToFlare, mBaseAi.m_ChanceAttackOnFlareTimeout);
+                b1 = true;
+            }
+
+            if (mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
+            {
+                if (mBaseAi.m_ContainingAuroraField?.m_IsActive ?? false)
+                {
+                    mBaseAi.m_HoldGroundReason = HoldGroundReason.InsideAuroraField;
+                    mBaseAi.HoldGroundInsideAuroraField();
+                    b2 = true;
+                }
+                else if (mBaseAi.m_PlayerSafeHaven != null)
+                {
+                    mBaseAi.HoldGroundSafeHaven();
+                    mBaseAi.m_HoldGroundReason = HoldGroundReason.SafeHaven;
+                    b2 = true;
+                }
+                else
+                {
+                    b2 = false;
+                }
+            }
+            else
+            {
+                b2 = false;
+            }
+
+            if (mBaseAi.m_WildlifeMode == WildlifeMode.Aurora && b2 != mBaseAi.m_WasHoldingForField)
+            {
+                mBaseAi.m_WasHoldingForField = b2;
+                if (b2 == false)
+                {
+                    if (CurrentTarget != null && mBaseAi.m_TimeInModeSeconds > mBaseAi.m_HoldForFieldMinimumDelaySeconds)
+                    {
+                        //possible request for super spline but damned if i can get it to work dude
+                        if (mBaseAi.EnterAttackModeIfPossible(CurrentTarget.transform.position, true))
+                        {
+                            return;
+                        }
+                        SetAiMode(AiMode.Flee);
+                        return;
+                    }
+                }
+                else
+                {
+                    mBaseAi.InitializeHoldForFieldTimers();
+                }
+            }
+            bool maybeAttackOrFleeForChemicalHazard = mBaseAi.MaybeAttackOrFleeForChemicalHazard();
+            if (!b1 && !maybeAttackOrFleeForChemicalHazard)
+            {
+                if (mBaseAi.MaybeHoldGroundForTorch(m_HoldGroundDistanceFromTorch) || mBaseAi.MaybeHoldGroundForTorchOnGround(m_HoldGroundDistanceFromTorchOnGround))
+                {
+                    mBaseAi.HoldGroundCommon(mBaseAi.m_TimeToStopHoldingGroundDueToTorch, mBaseAi.m_ChanceAttackOnTorchTimeout);
+                    b1 = true;
+                }
+                else if (mBaseAi.MaybeHoldGroundForFire(m_HoldGroundDistanceFromFire))
+                {
+                    mBaseAi.HoldGroundCommon(mBaseAi.m_TimeToStopHoldingGroundDueToFire, mBaseAi.m_ChanceAttackOnFireTimeout);
+                    b1 = true;
+                }
+                else if (!b1 && mBaseAi.MaybeHoldGroundForSpear(mBaseAi.m_HoldGroundDistanceFromSpear))
+                {
+                    mBaseAi.HoldGroundCommon(mBaseAi.m_TimeToStopHoldingGroundDueToSpear, mBaseAi.m_ChanceAttackOnSpearTimeout);
+                    b1 = true;
+                }
+                else if (!b1 && (mBaseAi.MaybeHoldGroundForBlueFlare(m_HoldGroundDistanceFromBlueFlare) || mBaseAi.MaybeHoldGroundForBlueFlareOnGround(m_HoldGroundDistanceFromBlueFlareOnGround)))
+                {
+                    mBaseAi.HoldGroundCommon(mBaseAi.m_TimeToStopHoldingGroundDueToBlueFlare, mBaseAi.m_ChanceAttackOnBlueFlareTimeout);
+                    b1 = true;
+                }
+                else if (!b1 && mBaseAi.MaybeHoldGroundDueToStruggle())
+                {
+                    PlayerStruggle playerStruggle = GameManager.m_PlayerStruggle;
+                    UniStormWeatherSystem weatherSystem = GameManager.m_TimeOfDay.m_WeatherSystem;
+
+                    float struggleGracePeriod = Mathf.Clamp(playerStruggle.m_GracePeriodAfterStruggleInSeconds - playerStruggle.m_SecondsSinceLastStruggle, 0, float.MaxValue);
+                    mBaseAi.HoldGroundCommon(24.0f / weatherSystem.m_DayLength * struggleGracePeriod + weatherSystem.m_ElapsedHoursAccumulator + weatherSystem.m_ElapsedHours, 100.0f);
+                    return;
+                }
+            }
+
+            //todo: this is awful, clean it up
+            if (maybeAttackOrFleeForChemicalHazard || b2 || mBaseAi.IsTargetGoneOrOutOfRange())
+            {
+                mBaseAi.MaybeFleeFromHoldGround();
+                if (CurrentMode != AiMode.HoldGround)
+                {
+                    return;
+                }
+                if (mBaseAi.Timberwolf?.CanEnterHideAndSeek() ?? false)
+                {
+                    SetAiMode(AiMode.HideAndSeek);
+                    return;
+                }
+                if (GameManager.m_PackManager.IsPackCombatRestricted(mBaseAi.m_PackAnimal) || maybeAttackOrFleeForChemicalHazard || b2 || !b1)
+                {
+                    return;
+                }
+                if (mBaseAi.m_TimeInModeSeconds <= mBaseAi.m_HoldGroundMinimumDelaySeconds)
+                {
+                    return;
+                }
+                if (mBaseAi.m_PreviousMode == AiMode.Feeding)
+                {
+                    return;
+                }
+                if (mBaseAi.m_PreviousMode == AiMode.Stalking && !mBaseAi.CanEnterStalking())
+                {
+                    return;
+                }
+                if (mBaseAi.CanEnterStalking())
+                {
+                    SetAiMode(AiMode.Stalking);
+                    return;
+                }
+            }
+            else if (mBaseAi.m_PreviousMode == AiMode.Feeding)
+            {
+                mBaseAi.ClearTarget();
+                SetAiMode(AiMode.Feeding);
+                return;
+            }
+            SetDefaultAiMode();
         }
 
 
@@ -1095,9 +1207,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mBaseAi.ScanForNewTarget();
             mBaseAi.ScanForSmells();
             if (mBaseAi.m_CurrentMode != AiMode.Idle || mBaseAi.m_StartMode == AiMode.Idle)
-            {
                 return;
-            }
             if (mBaseAi.m_TimeInModeSeconds > 10.0f)
             {
                 SetAiMode(mBaseAi.m_DefaultMode);
