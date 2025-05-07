@@ -4,23 +4,13 @@
 
 using Il2Cpp;
 using Il2CppTLD.AI;
+using Il2CppSystem.Collections.Generic;
 using UnityEngine;
 using static Il2Cpp.BaseAi;
 using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
-using static UnityEngine.GraphicsBuffer;
-using System.Reflection;
-using Il2CppSuperSplines;
-using ModSettings;
-using UnityEngine.Playables;
-using HarmonyLib;
-using UnityEngine.Rendering.PostProcessing;
-using static UnityEngine.SendMouseEvents;
-using Il2CppSystem.Security.Util;
-using Il2CppNodeCanvas.Tasks.Actions;
-using static Il2Cpp.UIRoot;
-using static MelonLoader.bHaptics;
 using Il2CppInterop.Runtime.Runtime;
 using System.Buffers.Text;
+using Il2CppSuperSplines;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -950,7 +940,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 mBaseAi.m_ExitGroupFleeTimerSeconds -= Time.deltaTime;
                 if (mBaseAi.m_ExitGroupFleeTimerSeconds <= 0.0)
                 {
-                    Log("Exiting group flee, resetting to default mode");
+                    //Log("Exiting group flee, resetting to default mode");
                     SetDefaultAiMode();
                     return;
                 }
@@ -958,43 +948,43 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             if (GameManager.m_Weather.IsIndoorEnvironment() && SquaredDistance(mBaseAi.m_CurrentTarget?.transform.position ?? mBaseAi.m_FleeFromPos, mBaseAi.gameObject.transform.position) > 900.0f)
             {
-                Log("Indoor environment and sqrdist(ai, target) > 900.0f, resetting to default mode");
+                //Log("Indoor environment and sqrdist(ai, target) > 900.0f, resetting to default mode");
                 SetDefaultAiMode();
                 return;
             }
 
             if (!mBaseAi.KeepFleeingFromTarget())
             {
-                Log("Should no longer flee, resetting to default mode...");
+                //Log("Should no longer flee, resetting to default mode...");
                 SetDefaultAiMode();
                 return;
             }
 
             if (mBaseAi.MaybeHandleTimeoutFleeing())
             {
-                Log("Flee time out, returning without resetting mode");
+                //Log("Flee time out, returning without resetting mode");
                 return; 
             }
 
-            if (!mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath("First check"))
+            if (!mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath())
             {
                 return;
             }
 
             if ((!mBaseAi.m_HasPickedForcedFleePos) || (mBaseAi.m_FleeReason != AiFleeReason.PackMorale))
             {
-                if (SquaredDistance(mBaseAi.m_FleeToPos, mBaseAi.m_CachedTransform.position) > 25.0f && !mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath($"sqr dist of {SquaredDistance(mBaseAi.m_FleeToPos, mBaseAi.m_CachedTransform.position)} > 25.0 check"))
+                if (SquaredDistance(mBaseAi.m_FleeToPos, mBaseAi.m_CachedTransform.position) > 25.0f && !mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath())
                 {
                     return;
                 }
-                if (mBaseAi.m_MoveAgent.HasPath() && Vector3.Dot(Vector3.Normalize(mBaseAi.m_FleeToPos - mBaseAi.m_CachedTransform.position), mBaseAi.m_CachedTransform.forward) <= 0.0f && !mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath($"Dot product check"))
+                if (mBaseAi.m_MoveAgent.HasPath() && Vector3.Dot(Vector3.Normalize(mBaseAi.m_FleeToPos - mBaseAi.m_CachedTransform.position), mBaseAi.m_CachedTransform.forward) <= 0.0f && !mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath())
                 {
                     return;
                 }
             }
             else
             {
-                if (!mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath($"4th check"))
+                if (!mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath())
                 {
                     return;
                 }
@@ -1296,7 +1286,256 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessWander()
         {
-            mBaseAi.ProcessWander();
+            bool hasNewWanderPos = false;
+            Vector3 wanderPos = Vector3.zero;
+            mBaseAi.ClearTarget();
+            MaybeImposter();
+            if (IsImposter())
+            {
+                mBaseAi.m_AiGoalSpeed = 0.0f;
+                return;
+            }
+            mBaseAi.m_AiGoalSpeed = mBaseAi.m_WalkSpeed;
+            if (mBaseAi.m_TimeInModeSeconds > 1.0f)
+            {
+                mBaseAi.ScanForNewTarget();
+            }
+            if ((mBaseAi.m_WanderingAroundPos == false) &&
+               (mBaseAi.m_PickedWanderDestination != false))
+            {
+                mBaseAi.ScanForSmells();
+            }
+            if (mBaseAi.m_NextCheckMovedDistanceTime < Time.deltaTime)
+            {
+                if (SquaredDistance(mBaseAi.m_CachedTransform.position, mBaseAi.m_PositionAtLastMoveCheck) < 0.04f)
+                {
+                    mBaseAi.m_PickedWanderDestination = false;
+                }
+                mBaseAi.m_NextCheckMovedDistanceTime = Time.time + 1.0f;
+                mBaseAi.m_PositionAtLastMoveCheck = mBaseAi.m_CachedTransform.position;
+            }
+            if (mBaseAi.m_PickedWanderDestination == false)
+            {  
+                if (mBaseAi.Moose != null && !mBaseAi.m_UseWanderAwayFromPos)
+                {
+                    hasNewWanderPos = mBaseAi.Moose?.MaybeSelectScratchingStump(out wanderPos) ?? false;
+                    if (hasNewWanderPos)
+                    {
+                        mBaseAi.m_CurrentWanderPos = wanderPos;
+                    }
+                }
+
+                if (!mBaseAi.m_UseWanderAwayFromPos && mBaseAi.m_UseWanderToPos)
+                {
+                    mBaseAi.m_CurrentWanderPos = mBaseAi.transform.position;
+                    hasNewWanderPos = AiUtils.GetClosestNavmeshPos(out Vector3 closestNavMeshPos, mBaseAi.m_WanderToPos, mBaseAi.m_CachedTransform.position);
+                    if (hasNewWanderPos)
+                    {
+                        mBaseAi.m_CurrentWanderPos = closestNavMeshPos;
+                    }
+                    mBaseAi.m_UseWanderToPos = false;
+                }
+                else
+                {
+                    hasNewWanderPos = mBaseAi.PickWanderDestinationAwayFromPoint(out wanderPos, mBaseAi.m_WanderAwayFromPos);
+                    if (hasNewWanderPos)
+                    {
+                        mBaseAi.m_CurrentWanderPos = wanderPos;
+                    }
+                    mBaseAi.m_UseWanderAwayFromPos = false;
+                }
+
+                if ((hasNewWanderPos) || mBaseAi.PickWanderDestination(out wanderPos))
+                {
+                    if (!hasNewWanderPos)
+                    {
+                        hasNewWanderPos = true;
+                        mBaseAi.m_CurrentWanderPos = wanderPos;
+                    }
+                    if (mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
+                    {
+                        hasNewWanderPos = mBaseAi.MaybeMoveWanderPosOutsideOfField(out wanderPos, mBaseAi.m_CurrentWanderPos);
+                    }
+                }
+
+                if (!hasNewWanderPos)
+                {
+                    mBaseAi.m_CurrentWanderPos = mBaseAi.transform.position;
+                    hasNewWanderPos = AiUtils.GetClosestNavmeshPos(out wanderPos, mBaseAi.m_CachedTransform.position, mBaseAi.m_CachedTransform.position);
+                    if (!hasNewWanderPos)
+                    {
+                        mBaseAi.MoveAgentStop();
+                        SetDefaultAiMode();
+                        return;
+                    }
+                    mBaseAi.m_CurrentWanderPos = wanderPos;
+                }
+
+                if (mBaseAi.m_WanderUseTurnRadius == false)
+                {
+                    hasNewWanderPos = mBaseAi.StartPath(mBaseAi.m_CurrentWanderPos, mBaseAi.m_WalkSpeed);
+                }
+                else
+                {
+                    mBaseAi.m_WanderTurnTargets = AiUtils.GetPointsForGradualTurn(mBaseAi.transform, mBaseAi.m_CurrentWanderPos, mBaseAi.m_WanderTurnRadius, mBaseAi.m_WanderTurnSegmentAngle);
+                    mBaseAi.m_WanderCurrentTarget = 0;
+                    if (mBaseAi.m_WanderTurnTargets.Count == 0)
+                    {
+                        Log($"No wander turn targets, this should be an error but we'll log and return for debug to start");
+                        return;
+                    }
+                    hasNewWanderPos = mBaseAi.StartPath(mBaseAi.m_WanderTurnTargets[0], mBaseAi.m_WalkSpeed);
+                }
+
+                if (!hasNewWanderPos)
+                {
+                    SetDefaultAiMode();
+                    return;
+                }
+
+                mBaseAi.m_PickedWanderDestination = true;
+            }
+
+            //TODO: Re-program getting away from aurora fields, this is broken in your edition now.
+            /* Spent literal hours trying to decode this. As far as I can tell it's trying to determine which aurora field to move away from? We might be able to re-program ourselves.
+            if ((mBaseAi.m_WildlifeMode == WildlifeMode.Aurora) && (mBaseAi.m_IsGettingAwayFromAuroraField == false))
+            {
+                Vector3 cachedPos = Vector3.zero;
+                if (((object)mBaseAi) is SplineNode splineNodeSelf)
+                {
+                    Log("SplineNode found!");
+                    cachedPos = splineNodeSelf.Transform.position;
+                }
+                else
+                {
+                    cachedPos = mBaseAi.transform.position;
+                }
+
+                float closestDist = float.MaxValue;
+                Il2CppSystem.Collections.Generic.List<AuroraField> lVar6 = AuroraManager.m_AuroraFieldsSceneManager.m_RegisteredAuroraFields;
+                uint uVar11 = 0U;
+                BaseAi pBVar18 = mBaseAi;
+                BaseAi __this_01 = mBaseAi;
+                while (lVar6 != null)
+                {   
+                    uVar11 = (uint)pBVar18;
+                    if (*(int*)(lVar6 + 0x18) <= (int)uVar11)
+                    {
+                        if (__this_01 != null)
+                        {
+                            if (__this_01.m_UseAimingElboHints)
+                            {
+                                goto LAB_18055f3b6;
+                            }
+
+                            mBaseAi.m_UseWanderAwayFromPos = true;
+                            if (__this_01)
+
+                            pUVar15 = SuperSplines.SplineNode$$get_Transform
+                                                ((SuperSplines_SplineNode_o*)__this_01,
+                                                    (MethodInfo*)0x0);
+                            if (pUVar15 != (UnityEngine_Transform_o*)0x0)
+                            {
+                                mBaseAi.m_WanderAwayFromPos = __this_01.transform.position;
+                                mBaseAi.m_PickedWanderDestination = false;
+                                mBaseAi.m_IsGettingAwayFromAuroraField = true;
+                                goto LAB_18055f3b6;
+                            }
+                        }
+                        break;
+                    }
+                    if (lVar6 == 0) break;
+                    lVar6 = *(longlong*)(lVar6 + 0x10);
+                    if (lVar6 == 0) break;
+                    pBVar18 = *(BaseAi_o**)(lVar6 + 0x20 + (longlong)(int)uVar11 * 8);
+                    if (pBVar18 == (BaseAi_o*)0x0) break;
+                    if (pBVar18.m_LeftHandTarget != null)
+                    {
+                        pUVar15 = SuperSplines.SplineNode$$get_Transform((SuperSplines_SplineNode_o*)pBVar18, (MethodInfo*)0x0);
+                        if (pUVar15 == (UnityEngine_Transform_o*)0x0) break;
+                        local_78.x = 0.0;
+                        local_78.y = 0.0;
+                        local_78.z = 0.0;
+                        pcVar12 = DAT_1843f8f20;
+                        if ((DAT_1843f8f20 == (code*)0x0) &&
+                            (pcVar12 = (code*)FUN_1802f1f40(
+                                                    "UnityEngine.Transform::get_position_Injected(Unit yEngine.Vector3&)"
+                                                    ), pcVar12 == (code*)0x0))
+                        {
+                            uVar17 = FUN_1802f1ba0(
+                                                    "UnityEngine.Transform::get_position_Injected(Unit yEngine.Vector3&)"
+                                                    );
+                            FUN_1802efda0(uVar17, 0);
+                            pcVar12 = (code*)swi(3);
+                            (*pcVar12)();
+                            return;
+                        }
+                        DAT_1843f8f20 = pcVar12;
+                        (*DAT_1843f8f20)(pUVar15, &local_78);
+                        uVar3 = local_88._0_8_;
+                        local_98.z = local_78.z;
+                        local_68[0].z = local_88.z;
+                        local_98.x = local_78.x;
+                        local_98.y = local_78.y;
+                        local_88.x = cachedPos.x;
+                        local_88.y = cachedPos.y;
+                        local_68[0].x = local_88.x;
+                        local_68[0].y = local_88.y;
+                        local_88._0_8_ = uVar3;
+                        fVar22 = (float)FUN_1804cb5a0(local_68, &local_98);
+                        if (fVar22 < closestDist)
+                        {
+                            __this_01 = pBVar18;
+                            closestDist = fVar22;
+                        }
+                    }
+                    pBVar18 = (BaseAi_o*)(ulonglong)(uVar11 + 1);
+                    lVar6 = *(longlong*)(lVar13 + 0x18);
+                }
+            }
+            LAB_18055f3b6:
+            */
+
+
+            if (mBaseAi.m_MoveAgent.m_DestinationReached)
+            {
+                bool pathStarted = false;
+                if (mBaseAi.m_WanderUseTurnRadius)
+                {
+                    mBaseAi.m_WanderCurrentTarget += 1;
+                    if (mBaseAi.m_WanderCurrentTarget < BaseAi.m_WanderTurnTargets.Length)
+                    {
+                        mBaseAi.StartPath(mBaseAi.m_WanderTurnTargets[mBaseAi.m_WanderCurrentTarget], mBaseAi.m_WalkSpeed);
+                        pathStarted = true;
+                    }
+                }
+                if (!pathStarted)
+                {
+                    mBaseAi.m_PickedWanderDestination = false;
+                }
+            }
+
+            if (mBaseAi.m_WanderDurationHours > 0.0001f && mBaseAi.m_WanderDurationHours < mBaseAi.m_ElapsedWanderHours)
+            {
+                mBaseAi.m_ElapsedWanderHours = 0.0f;
+                mBaseAi.m_WanderDurationHours = 0.0f;
+                mBaseAi.m_WanderingAroundPos = false;
+                SetDefaultAiMode();
+                return;
+            }
+
+            mBaseAi.MaybeHoldGroundAuroraField();
+            mBaseAi.MaybeEnterWanderPause();
+
+
+            if (mBaseAi.Bear?.ShouldAlwaysStalkPlayer() ?? false)
+            {
+                mBaseAi.MaybeForceStalkPlayer();
+            }
+
+            UniStormWeatherSystem uniStormWeatherSystem = GameManager.m_TimeOfDay.m_WeatherSystem;
+            mBaseAi.m_ElapsedWanderHours += (24.0f / (uniStormWeatherSystem.m_DayLengthScale * uniStormWeatherSystem.m_DayLength)) * Time.deltaTime;
+
         }
 
 
@@ -1527,6 +1766,22 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         #endregion
 
+
+        #region Other Overrides
+
+        protected virtual void MaybeImposter()
+        {
+            mBaseAi.MaybeImposter();
+        }
+
+
+        protected virtual bool IsImposter()
+        {
+            return mBaseAi.IsImposter();
+        }
+
+        #endregion
+
         #endregion
 
 
@@ -1549,7 +1804,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 
         //returns true if calling method should continue, false if early out
-        protected virtual bool PickFleeDestinationAndTryStartPath(string context)
+        protected virtual bool PickFleeDestinationAndTryStartPath()
         {
             if (mBaseAi.PickFleeDesination(out Vector3 fleePos))
             {
@@ -1558,7 +1813,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     SetDefaultAiMode();
                     return false;
                 }
-                Log($"[{context}] Picked new flee position {fleePos} which is {Vector3.Distance(fleePos, mBaseAi.m_CachedTransform.position)} away");
+                //Log($"Picked new flee position {fleePos} which is {Vector3.Distance(fleePos, mBaseAi.m_CachedTransform.position)} away");
                 mBaseAi.m_FleeToPos = fleePos;
                 mBaseAi.m_PickedFleeDestination = true;
             }

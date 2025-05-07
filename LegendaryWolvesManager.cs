@@ -55,6 +55,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         private bool mEnabled = false;
         private long mStartTime = System.DateTime.Now.Ticks;
         private long mLastReadoutTime = System.DateTime.Now.Ticks;
+        private bool mStartupReadoutDone = false;
 
 #if DEV_BUILD_SPAWNONE
         private bool mSpawnedOne = false;
@@ -266,6 +267,18 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         private void AugmentAi(BaseAi baseAi, float augmentValue)
         {
             AugmentWolfAi(baseAi);
+            if (!mStartupReadoutDone)
+            {
+                mStartupReadoutDone = true;
+                Il2CppSystem.Collections.Generic.List<AuroraField> auroras = AuroraManager.m_AuroraFieldsSceneManager.m_RegisteredAuroraFields;
+                for (int i = 0, iMax = auroras.Count; i < iMax; i++)
+                {
+                    for (int j = 0, jMax = auroras[i].m_InfluencedObjects?.Count ?? 0; j < jMax; j++)
+                    {
+                        Log($"Found {auroras[i].m_InfluencedObjects[j].name} in an aurorafield influenced object list!");
+                    }
+                }
+            }
         }
 
 
