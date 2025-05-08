@@ -1,9 +1,4 @@
-﻿#define DEV_BUILD
-#define DEV_BUILD_LOG
-//#define DEV_BUILD_LOG_VERBOSE
-
-
-using Il2Cpp;
+﻿using Il2Cpp;
 using UnityEngine;
 using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 
@@ -16,24 +11,17 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public ScaredyWolf(BaseAi target) : base(target) { }
 
-        protected override void Process()
-        {
 
-            switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
+        public override void SetAiMode(AiMode mode)
+        {
+            if (((1U << (int)CurrentMode) & (uint)AiModeFlags.ScaredyWolfIgnoreModes) != 0U)
             {
-                case AiMode.Attack:
-                case AiMode.Flee:
-                case AiMode.Stalking:
-                case AiMode.Struggle:
-#if DEV_BUILD_LOG
-                        Log("Flee, scaredy wolf!");
-#endif
-                    mBaseAi.m_FleeReason = BaseAi.AiFleeReason.PackMorale;
-                    SetAiMode(AiMode.Flee);
-                    break;
-                default:
-                    base.Process();
-                    break;
+                Log($"Scaredy wolves don't like to {mode}!");
+                mode = AiMode.Flee;
+            }
+            if (CurrentMode != mode)
+            {
+                base.SetAiMode(mode);
             }
         }
 

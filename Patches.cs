@@ -1,7 +1,4 @@
-﻿#define DEV_BUILD
-//#define DEV_BUILD_PROFILE
-
-using HarmonyLib;
+﻿using HarmonyLib;
 using Il2Cpp;
 using UnityEngine;
 using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
@@ -16,42 +13,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         internal class SpawnRegionPatches_InstantiateSpawnInternal
         {
             public static void Postfix(BaseAi __result)
-            {
-#if DEV_BUILD
-                try
-                {
-#endif
-                    Manager.TryAugment(__result, new System.Random().Next(100, 500) * 0.01f);
-#if DEV_BUILD
-                }
-                catch (Exception e)
-                {
-                    LogError($"Error during SpawnRegion.InstantiateSpawnInternal.Prefix: {e}");
-                    return;
-                };
-#endif
-            }
-        }
-
-
-        [HarmonyPatch(typeof(BaseAi), "Despawn")]
-        internal class BaseAiPatches_Despawn
-        {
-            public static void Prefix(BaseAi __instance)
-            {
-#if DEV_BUILD
-                try
-                {
-#endif
-                    Manager.TryUnaugment(__instance);
-#if DEV_BUILD
-                }
-                catch (Exception e)
-                {
-                    LogError($"Error during BaseAi.Despawn.Prefix: {e}");
-                    return;
-                };
-#endif
+            { 
+                Manager.TryAugment(__result, new System.Random().Next(100, 500) * 0.01f);
             }
         }
 
@@ -60,63 +23,30 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         [HarmonyPatch(typeof(BaseAi), "Update")]
         internal class BaseAiPatches_Update
         {
-#if DEV_BUILD_PROFILE
-            internal struct StateData
+            public static bool Prefix(BaseAi __instance)
             {
-                public int mId;
-                public long mStartTime;
-                public string mName;
-
-                public StateData(int id, long startTime, string name)
-                {
-                    mId = id;
-                    mStartTime = startTime;
-                    mName = name;
-                }
+                return !Manager.TryUpdate(__instance);
             }
-#endif
-            public static bool Prefix(BaseAi __instance
-#if DEV_BUILD
-#if DEV_BUILD_PROFILE
-
-                , ref StateData __state
-
-#endif
-                )
-            {
-#if DEV_BUILD
-                try
-                {
-#endif
-
-#if DEV_BUILD_PROFILE
-                    __state = new StateData(__instance.GetHashCode(), DateTime.Now.Ticks, __instance.gameObject?.name ?? "null");
-
-#endif
-#endif
-                    bool success = !Manager.TryUpdate(__instance);
-#if DEV_BUILD_PROFILE
-                    Manager.LogCustomCycleTime(__state.mId, DateTime.Now.Ticks - __state.mStartTime, __state.mName);
-                    __state =  new StateData(__state.mId, DateTime.Now.Ticks, __state.mName);
-#endif
-                    return success;
-#if DEV_BUILD
-                }
-                catch (Exception e)
-                {
-                    LogError($"Error during BaseAi.Update.Prefix: {e}");
-                    return false;
-                }
-            }
-
-#if DEV_BUILD_PROFILE
-            public static void Postfix(ref StateData __state)
-            {
-                Manager.LogBaseCycleTime(__state.mId, DateTime.Now.Ticks - __state.mStartTime, __state.mName);
-            }
-#endif
-#endif
         }
+
+
+        //This is more for external calls to SetAiMode
+        //my own ICustomAi does most of the heavy lifting for BaseAi now
+        //Ufortunately a lot of other systems like to call and try to route around my system
+        //This will allow ICustomAi classes to  catch these and adjust as needed
+
+        //2: Mumble grumble, of course this is a stack overflow without a lock
+        // and of course in order to check the lock it has to run again
+        // at least dictionary checks are fast!
+        [HarmonyPatch(typeof(BaseAi), "SetAiMode", new Type[] { typeof(AiMode) })]
+        internal class BaseAiPatches_SetAiMode
+        {
+            public static bool Prefix(BaseAi __instance, AiMode mode)
+            {
+                return !Manager.TrySetAiMode(__instance, mode);
+            }
+        }
+
 
 
         [HarmonyPatch(typeof(BaseAi), "DeserializeUsingBaseAiDataProxy", new Type[] {typeof(BaseAiDataProxy)})]
@@ -149,24 +79,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 
 
-        [HarmonyPatch(typeof(GameManager), "DoExitToMainMenu")]
-        internal class GameManagerPatches_DoExitToMainMenu
+        [HarmonyPatch(typeof(LoadScene), "Activate", new Type[] { typeof(bool) })]
+        internal class LoadScenePatches_Activate
         {
             public static void Prefix()
             {
-#if DEV_BUILD  
-                try
-                {
-#endif
-                    Manager.ClearAugments();
-#if DEV_BUILD
-                }
-                catch (Exception e)
-                {
-                    LogError($"Error during GameManager.DoExitToMainMenu.Prefix: {e}");
-                    return;
-                }
-#endif
+                Manager?.ClearAugments();
             }
         }
     }

@@ -61,11 +61,20 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             | PassingAttack
             | Howl
             | Disabled,
+
+        ScaredyWolfIgnoreModes =
+              Attack
+            | Stalking
+            | PassingAttack
+            | Struggle
+            | HoldGround,
     }
 
     public interface ICustomAi
     {
         BaseAi BaseAi { get; }
+        bool SetAiModeLock { get; }
+        void SetAiMode(AiMode mode);
         void Update();
         void Augment();
         void UnAugment();

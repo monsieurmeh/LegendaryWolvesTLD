@@ -1,9 +1,4 @@
-﻿#define DEV_BUILD
-#define DEV_BUILD_LOG
-//#define DEV_BUILD_LOG_VERBOSE
-
-
-using Il2Cpp;
+﻿using Il2Cpp;
 using UnityEngine;
 using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 
@@ -34,7 +29,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        public override void UnAugment()
+        public override void UnAugment() 
         {
             Vector3 one = Vector3.one;
             mBaseAi?.gameObject?.transform?.set_localScale_Injected(ref one);

@@ -1,18 +1,7 @@
-﻿#define DEV_BUILD
-#define DEV_BUILD_LOG
-//#define DEV_BUILD_PROFILE
-#define DEV_BUILD_SPAWNONE
-//#define DEV_BUILD_LOG_VERBOSE
-//#define DEV_BUILD_STATELABEL
+﻿//#define DEV_BUILD_SPAWNONE
+#define DEV_BUILD_STATELABEL
 
 using Il2Cpp;
-using Il2CppInterop.Runtime.Injection;
-using Il2CppNodeCanvas.Tasks.Conditions;
-using Il2CppTLD.AI;
-using Il2CppTMPro;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
@@ -119,9 +108,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public void ClearAugments()
         {
-#if DEV_BUILD_PROFILE
-            ReadoutCycleTimes();
-#endif
             foreach (ICustomAi customAi in mAiAugments.Values)
             {
                 TryUnaugment(customAi.BaseAi);
@@ -186,6 +172,17 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             return true;
         }
 
+
+        public bool TrySetAiMode(BaseAi baseAi, AiMode aiMode)
+        {
+            if (!AiAugments.TryGetValue(baseAi.GetHashCode(), out ICustomAi customAi) || customAi.SetAiModeLock)
+            {
+                return false;
+            }
+            customAi.SetAiMode(aiMode);
+            return true;
+        }
+
         #endregion
 
 
@@ -204,31 +201,23 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 // Don't want to override timberwolf behaviour just yet; I have different plans for them!
                 return;
             }
-            WolfTypes newType = WolfTypes.Wanderer;//(WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
+            WolfTypes newType = (WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
             switch (newType)
             {
                 case WolfTypes.Default:
-#if DEV_BUILD_LOG
-                    Log($"Spawning BaseWolf at {baseAi.gameObject.transform.position}!");
-#endif
+                    //Log($"Spawning BaseWolf at {baseAi.gameObject.transform.position}!");
                     mAiAugments.Add(baseAi.GetHashCode(), new BaseWolf(baseAi));
                     break;
                 case WolfTypes.ScaredyWolf:
-#if DEV_BUILD_LOG
-                    Log($"Spawning ScaredyWolf at {baseAi.gameObject.transform.position}!");
-#endif
+                    //Log($"Spawning ScaredyWolf at {baseAi.gameObject.transform.position}!");
                     mAiAugments.Add(baseAi.GetHashCode(), new ScaredyWolf(baseAi));
                     break;
                 case WolfTypes.Wanderer:
-#if DEV_BUILD_LOG
-                    Log($"Spawning WanderingWolf at {baseAi.gameObject.transform.position}!");
-#endif
+                    //Log($"Spawning WanderingWolf at {baseAi.gameObject.transform.position}!");
                     mAiAugments.Add(baseAi.GetHashCode(), new WanderingWolf(baseAi));
                     break;
                 case WolfTypes.BigWolf:
-#if DEV_BUILD_LOG
-                    Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
-#endif
+                    //Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
                     mAiAugments.Add(baseAi.GetHashCode(), new BigWolf(baseAi));
                     break;
                 default:
@@ -257,52 +246,46 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #endregion
 
 
-        #region Debug
+            #region Debug
 
-        public void Log(string message, bool error = false)
-        {
-            string logMessage = $"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}";
-            if (error)
+            public void Log(string message, bool error = false)
             {
-                mLogErrorAction.Invoke(logMessage);
+                string logMessage = $"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}";
+                if (error)
+                {
+                    mLogErrorAction.Invoke(logMessage);
+                }
+                else
+                {
+                    mLogMessageAction.Invoke(logMessage);
+                }
             }
-            else
+
+
+            public void LogError(string message)
             {
-                mLogMessageAction.Invoke(logMessage);
+                Log(message, true);
             }
-        }
 
 
-        public void LogError(string message)
-        {
-            Log(message, true);
-        }
+            public void Log(BaseAi baseAi, string msg, bool error = false)
+            {
+                Log($"{BaseAiInfo(baseAi)} {msg}", error);
+            }
 
 
-        public void Log(BaseAi baseAi, string msg, bool error = false)
-        {
-            Log($"{BaseAiInfo(baseAi)} {msg}", error);
-        }
+            public void LogError(BaseAi baseAi, string msg)
+            {
+                Log(baseAi, msg, true);
+            }
 
 
-        public void LogError(BaseAi baseAi, string msg)
-        {
-            Log(baseAi, msg, true);
-        }
+            public static string BaseAiInfo(BaseAi baseAi)
+            {
+                return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}] at {baseAi?.gameObject?.transform?.position ?? Vector3.zero}";
+            }
 
-
-        public static string BaseAiInfo(BaseAi baseAi)
-        {
-            return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}] at {baseAi?.gameObject?.transform?.position ?? Vector3.zero}";
-        }
-
-
-        public static string GetStackTrace()
-        {
-            return UnityEngine.StackTraceUtility.ExtractStackTrace();
-        }
-
-        #endregion
+            #endregion
     }
 
 
