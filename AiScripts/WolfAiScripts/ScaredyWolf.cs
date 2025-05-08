@@ -28,7 +28,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #if DEV_BUILD_LOG
                         Log("Flee, scaredy wolf!");
 #endif
-                    mBaseAi.ProcessFlee();
+                    mBaseAi.m_FleeReason = BaseAi.AiFleeReason.PackMorale;
+                    SetAiMode(AiMode.Flee);
                     break;
                 default:
                     base.Process();
@@ -43,6 +44,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 renderer.material.color = Color.yellow;
             }
+            base.Augment();
         }
     }
 }

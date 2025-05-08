@@ -1,9 +1,9 @@
 ﻿#define DEV_BUILD
 #define DEV_BUILD_LOG
 //#define DEV_BUILD_PROFILE
-//#define DEV_BUILD_SPAWNONE
+#define DEV_BUILD_SPAWNONE
 //#define DEV_BUILD_LOG_VERBOSE
-#define DEV_BUILD_STATELABEL
+//#define DEV_BUILD_STATELABEL
 
 using Il2Cpp;
 using Il2CppInterop.Runtime.Injection;
@@ -67,79 +67,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         private long TicksSinceLastReadout { get { return System.DateTime.Now.Ticks - mLastReadoutTime; } }
 
         public Dictionary<int, ICustomAi> AiAugments { get { return mAiAugments; } }
-
-
-        #region debug profiling code
-
-#if DEV_BUILD_PROFILE
-        public Dictionary<int, string> AiCycleTimeNameDict = new Dictionary<int, string>();
-        public Dictionary<int, List<long>> BaseAiCycleTimes = new Dictionary<int, List<long>>();
-        public Dictionary<int, List<long>> CustomAiCycleTimes = new Dictionary<int, List<long>>();
-
-        public void LogCustomCycleTime(int id, long time, string name)
-        {
-            if (!CustomAiCycleTimes.TryGetValue(id, out List<long> times))
-            {
-                times = new List<long>();
-                CustomAiCycleTimes.Add(id, times);
-            }
-            times.Add(time);
-            if (!AiCycleTimeNameDict.TryGetValue(id, out _))
-            {
-                AiCycleTimeNameDict.Add(id, name);
-            }
-        }
-
-
-        public void LogBaseCycleTime(int id, long time, string name)
-        {
-            if (!BaseAiCycleTimes.TryGetValue(id, out List<long> times))
-            {
-                times = new List<long>();
-                BaseAiCycleTimes.Add(id, times);
-            }
-            times.Add(time);
-            if (!AiCycleTimeNameDict.TryGetValue(id, out _))
-            {
-                AiCycleTimeNameDict.Add(id, name);
-            }
-        }
-
-        protected void ReadoutCycleTimes()
-        {
-            Log($"CustomAiCycleTimes: {CustomAiCycleTimes.Count}; BaseAiCycletimes: {BaseAiCycleTimes.Count}");
-            foreach (int key in CustomAiCycleTimes.Keys)
-            {
-                long totalCustom = 0l;
-                int countCustom = 0;
-
-                foreach (long time in CustomAiCycleTimes[key])
-                {
-                    totalCustom += time;
-                    countCustom++;
-                }
-                long totalBase = 0l;
-                int countBase = 0;
-                if (BaseAiCycleTimes.ContainsKey(key))
-                {
-
-                    foreach (long time in BaseAiCycleTimes[key])
-                    {
-                        totalBase += time;
-                        countBase++;
-                    }
-                }
-                Log($"{AiCycleTimeNameDict[key]} with hashcode {key} suffered through average time of {(float)(totalCustom / (countCustom > 0 ? countCustom : 1))} custom process ticks vs {(float)(totalBase / (countBase > 0 ? countBase : 1))} base process ticks");
-            }
-            BaseAiCycleTimes.Clear();
-            CustomAiCycleTimes.Clear();
-            AiCycleTimeNameDict.Clear();
-        }
-
-#endif
-
-
-        #endregion
 
 
         public bool Initialize(Settings settings, Action<string> logMessageAction, Action<string> logErrorAction)
@@ -267,24 +194,17 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         private void AugmentAi(BaseAi baseAi, float augmentValue)
         {
             AugmentWolfAi(baseAi);
-            if (!mStartupReadoutDone)
-            {
-                mStartupReadoutDone = true;
-                Il2CppSystem.Collections.Generic.List<AuroraField> auroras = AuroraManager.m_AuroraFieldsSceneManager.m_RegisteredAuroraFields;
-                for (int i = 0, iMax = auroras.Count; i < iMax; i++)
-                {
-                    for (int j = 0, jMax = auroras[i].m_InfluencedObjects?.Count ?? 0; j < jMax; j++)
-                    {
-                        Log($"Found {auroras[i].m_InfluencedObjects[j].name} in an aurorafield influenced object list!");
-                    }
-                }
-            }
         }
 
 
         private void AugmentWolfAi(BaseAi baseAi)
         {
-            WolfTypes newType = WolfTypes.Default;//(WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
+            if (baseAi.Timberwolf != null)
+            {
+                // Don't want to override timberwolf behaviour just yet; I have different plans for them!
+                return;
+            }
+            WolfTypes newType = WolfTypes.Wanderer;//(WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
             switch (newType)
             {
                 case WolfTypes.Default:
@@ -293,24 +213,24 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 #endif
                     mAiAugments.Add(baseAi.GetHashCode(), new BaseWolf(baseAi));
                     break;
-                //case WolfTypes.ScaredyWolf:
+                case WolfTypes.ScaredyWolf:
 #if DEV_BUILD_LOG
-                // Log($"Spawning ScaredyWolf at {baseAi.gameObject.transform.position}!");
+                    Log($"Spawning ScaredyWolf at {baseAi.gameObject.transform.position}!");
 #endif
-                //mAiAugments.Add(baseAi.GetHashCode(), new ScaredyWolf(baseAi));
-                //break;
-                // case WolfTypes.Wanderer:
+                    mAiAugments.Add(baseAi.GetHashCode(), new ScaredyWolf(baseAi));
+                    break;
+                case WolfTypes.Wanderer:
 #if DEV_BUILD_LOG
-                // Log($"Spawning WanderingWolf at {baseAi.gameObject.transform.position}!");
+                    Log($"Spawning WanderingWolf at {baseAi.gameObject.transform.position}!");
 #endif
-                // mAiAugments.Add(baseAi.GetHashCode(), new WanderingWolf(baseAi));
-                //break;
-                //case WolfTypes.BigWolf:
-                //#if DEV_BUILD_LOG
-                //Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
-                //#endif
-                //mAiAugments.Add(baseAi.GetHashCode(), new BigWolf(baseAi));
-                //break;
+                    mAiAugments.Add(baseAi.GetHashCode(), new WanderingWolf(baseAi));
+                    break;
+                case WolfTypes.BigWolf:
+#if DEV_BUILD_LOG
+                    Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
+#endif
+                    mAiAugments.Add(baseAi.GetHashCode(), new BigWolf(baseAi));
+                    break;
                 default:
                     return;
             }
@@ -328,6 +248,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             if (mAiAugments.TryGetValue(hashCode, out ICustomAi customAi))
             {
+                Log($"Unaugmenting ai with hashcode {hashCode}");
                 customAi.UnAugment();
                 mAiAugments.Remove(hashCode);
             }

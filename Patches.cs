@@ -119,12 +119,42 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
+        [HarmonyPatch(typeof(BaseAi), "DeserializeUsingBaseAiDataProxy", new Type[] {typeof(BaseAiDataProxy)})]
+        internal class BaseAiPatches_DeserializeUsingBaseAiDataProxy
+        {
+            //This fucker likes to undo all the work we do at startup for custom wolves because it fires later
+            public static void Prefix(BaseAi __instance, BaseAiDataProxy proxy)
+            {
+                if (Manager.AiAugments.ContainsKey(__instance?.GetHashCode() ?? 0))
+                {
+                    if (__instance.m_StartMode != AiMode.None)
+                    {
+                        proxy.m_StartMode = __instance.m_StartMode;
+                    }
+                    if (__instance.m_DefaultMode != AiMode.None)
+                    {
+                        proxy.m_DefaultMode = __instance.m_DefaultMode;
+                    }
+                    if (__instance.m_CurrentMode != AiMode.None)
+                    {
+                        proxy.m_CurrentMode = __instance.m_CurrentMode;
+                    }
+                    if ((__instance.m_Waypoints?.Count ?? 0) > 0)
+                    {
+                        proxy.m_Waypoints = __instance.m_Waypoints;
+                    }
+                }
+            }
+        }
+
+
+
         [HarmonyPatch(typeof(GameManager), "DoExitToMainMenu")]
         internal class GameManagerPatches_DoExitToMainMenu
         {
             public static void Prefix()
             {
-#if DEV_BUILD
+#if DEV_BUILD  
                 try
                 {
 #endif

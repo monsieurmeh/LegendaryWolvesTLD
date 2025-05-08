@@ -1,6 +1,7 @@
 ﻿#define DEV_BUILD
 #define DEV_BUILD_LOG
 //#define DEV_BUILD_LOG_VERBOSE
+#define DEV_BUILD_STATELABEL
 
 using Il2Cpp;
 using Il2CppTLD.AI;
@@ -11,6 +12,8 @@ using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 using Il2CppInterop.Runtime.Runtime;
 using System.Buffers.Text;
 using Il2CppSuperSplines;
+using HarmonyLib;
+using static Il2Cpp.UITweener;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -24,26 +27,32 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #region ICustomAi
 
         protected BaseAi mBaseAi;
+#if DEV_BUILD_STATELABEL
+        protected AiMode mCachedMode = AiMode.None;
+        protected bool mReadout = false;
         public Transform mMarkerTransform;
         public Renderer mMarkerRenderer;
+#endif
 
         public BaseAi BaseAi { get { return mBaseAi; } }
         public virtual WolfTypes WolfType { get { return WolfTypes.Default; } }
-        
 
-        public virtual void Augment() 
+
+        public virtual void Augment()
         {
+#if DEV_BUILD_STATELABEL
             GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            marker.transform.localScale = Vector3.one * 1f;
+            marker.transform.localScale = new Vector3(1.0f, 250.0F, 1.0f);
             marker.GetComponent<Collider>().enabled = false;
             GameObject.Destroy(marker.GetComponent<Collider>());
             mMarkerTransform = marker.transform;
             mMarkerTransform.SetParent(mBaseAi.transform);
             mMarkerTransform.position = mBaseAi.transform.position;
             mMarkerRenderer = marker.GetComponent<Renderer>();
+#endif
         }
 
-
+#if DEV_BUILD_STATELABEL
         public void SetMarkerColor()
         {
             mMarkerRenderer.material.color = GetMarkerColor();
@@ -52,25 +61,29 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public Color GetMarkerColor()
         {
-            //mMarkerRenderer.gameObject.active = true;
+            if (mCachedMode != CurrentMode)
+            {
+                mCachedMode = CurrentMode;
+                mMarkerRenderer.gameObject.active = true;
+            }
             switch (CurrentMode)
             {
-                case AiMode.Attack:
+                case AiMode.Wander:
                     return Color.red;
-                case AiMode.PassingAttack:
-                    return Color.cyan;
-                case AiMode.HideAndSeek:
-                    return Color.green;
-                case AiMode.Stalking:
-                    return Color.black;
-                case AiMode.HoldGround:
+                case AiMode.WanderPaused:
                     return Color.blue;
+                case AiMode.GoToPoint:
+                    return Color.green;
+                case AiMode.PatrolPointsOfInterest:
+                    return Color.black;
+                case AiMode.FollowWaypoints:
+                    return Color.cyan;
                 default:
-                    //mMarkerRenderer.gameObject.active = false;
+                    mMarkerRenderer.gameObject.active = false;
                     return Color.clear;
             }
         }
-
+#endif
 
         public virtual void UnAugment() { }
 
@@ -81,7 +94,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             try
             {
 #endif
+
+#if DEV_BUILD_STATELABEL
                 mMarkerRenderer.material.color = GetMarkerColor();
+#endif
                 if (GameManager.m_IsPaused)
                 {
                     return;
@@ -123,6 +139,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                         }
                     }
                     mBaseAi.DoCustomModeModifiers();
+                    mBaseAi.MoveAgentStop();
+                    mBaseAi.m_MoveAgent.m_DestinationReached = true;
                     mBaseAi.m_FirstFrame = false;
                 }
                 if (!mBaseAi.IsImposter() && mBaseAi.m_ImposterAnimatorDisabled)
@@ -143,6 +161,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 {
                     CurrentTarget.m_BaseAiTargetingMe = mBaseAi;
                 }
+                mReadout = true;
 #if DEV_BUILD
             }
             catch (Exception e)
@@ -161,11 +180,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected void ProcessCurrentAiMode()
         {
-            //mBaseAi.ProcessCommonPre();
             PreProcess();
             Process();
             PostProcess();
-            //mBaseAi.ProcessCommonPost();
         }
 
 
@@ -285,7 +302,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     break;
                 case AiMode.InteractWithProp:
                     ProcessInteractWithProp();
-                    break; 
+                    break;
                 case AiMode.ScriptedSequence:
                     ProcessScriptedSequence();
                     break;
@@ -306,7 +323,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void PostProcess()
         {
-            if (mBaseAi.m_CurrentMode == AiMode.Dead && mBaseAi.m_CurrentMode == AiMode.ScriptedSequence)
+            if (mBaseAi.m_CurrentMode == AiMode.Dead || mBaseAi.m_CurrentMode == AiMode.ScriptedSequence)
             {
                 return;
             }
@@ -348,8 +365,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected AiTarget CurrentTarget { get { return mBaseAi.m_CurrentTarget; } }
         protected AiMode CurrentMode { get { return mBaseAi.m_CurrentMode; } }
-
-   
+        protected string Name { get { return mBaseAi.gameObject?.name ?? "NULL"; } }
 
 
         protected virtual void ClearTargetAndSetDefaultAiMode()
@@ -357,12 +373,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mBaseAi.ClearTarget();
             SetDefaultAiMode();
             return;
-        }
-
-
-        protected virtual void SetAiMode(AiMode mode)
-        {
-            mBaseAi.SetAiMode(mode);
         }
 
 
@@ -745,6 +755,14 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         #region Hinterland Overrides
 
+        //Don't think we need to override this unless we end up having seriously conflicting behaviours during EnterXYZ() type methods
+        protected virtual void SetAiMode(AiMode mode)
+        {
+            Log($"Setting AiMode to {mode}");
+            mBaseAi.SetAiMode(mode);
+        }
+
+
         #region Process Overrides
 
         protected virtual void ProcessAttack()
@@ -963,7 +981,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             if (mBaseAi.MaybeHandleTimeoutFleeing())
             {
                 //Log("Flee time out, returning without resetting mode");
-                return; 
+                return;
             }
 
             if (!mBaseAi.m_PickedFleeDestination && !PickFleeDestinationAndTryStartPath())
@@ -1025,20 +1043,28 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected virtual void ProcessFollowWaypoints()
         {
+            //Log($"Able to reach current waypoint {mBaseAi.m_Waypoints[mBaseAi.m_TargetWaypointIndex]}: {mBaseAi.CanPathfindToPosition(mBaseAi.m_Waypoints[mBaseAi.m_TargetWaypointIndex])}");
+            if (!mBaseAi.m_MoveAgent.m_DestinationReached)
+            {
+                return;
+            }
             if (!mBaseAi.m_HasEnteredFollowWaypoints)
             {
                 mBaseAi.EnterFollowWaypoints();
                 mBaseAi.m_HasEnteredFollowWaypoints = true;
             }
+            Log($"mBaseAi.m_TargetWaypoint is {mBaseAi.m_TargetWaypointIndex}");
             if (mBaseAi.m_TargetWaypointIndex == -1 ||
-                mBaseAi.m_TargetWaypointIndex >= mBaseAi.m_Waypoints.Count)
+                mBaseAi.m_TargetWaypointIndex >= (mBaseAi.m_Waypoints?.Count ?? 0))
             {
                 mBaseAi.ScanForNewTarget();
                 mBaseAi.ScanForSmells();
                 mBaseAi.MaybeEnterWanderPause();
                 return;
             }
-            if (Vector3.Distance(mBaseAi.m_CachedTransform.position, mBaseAi.m_Waypoints[mBaseAi.m_TargetWaypointIndex]) >= 1.0f)
+            /*
+            float distance = Vector2.Distance(new Vector2(mBaseAi.m_CachedTransform.position.x, mBaseAi.m_CachedTransform.position.z), new Vector2(mBaseAi.m_Waypoints[mBaseAi.m_TargetWaypointIndex].x, mBaseAi.m_Waypoints[mBaseAi.m_TargetWaypointIndex].z));
+            if (distance >= m_MaxWaypointDistance)
             {
                 if (!mBaseAi.m_MoveAgent.m_DestinationReached)
                 {
@@ -1048,6 +1074,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     return;
                 }
             }
+            */
             mBaseAi.MaybeWander();
             mBaseAi.m_TargetWaypointIndex++;
             if (mBaseAi.m_TargetWaypointIndex >= mBaseAi.m_Waypoints.Length)
@@ -1055,9 +1082,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 mBaseAi.HandleLastWaypoint();
             }
             mBaseAi.PathfindToWaypoint(mBaseAi.m_TargetWaypointIndex);
-            mBaseAi.ScanForNewTarget();
-            mBaseAi.ScanForSmells();
-            mBaseAi.MaybeEnterWanderPause();
         }
 
 
@@ -1074,7 +1098,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             bool b2 = false;
 
             if (mBaseAi.m_DelayStopHoldGroundTimers && !GameManager.m_TimeOfDay.IsTimeLapseActive())
-            { 
+            {
                 mBaseAi.SetStopHoldGroundTimers();
                 mBaseAi.m_DelayStopHoldGroundTimers = false;
             }
@@ -1305,7 +1329,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 mBaseAi.ScanForSmells();
             }
-            if (mBaseAi.m_NextCheckMovedDistanceTime < Time.deltaTime)
+            if (mBaseAi.m_NextCheckMovedDistanceTime < Time.time)
             {
                 if (SquaredDistance(mBaseAi.m_CachedTransform.position, mBaseAi.m_PositionAtLastMoveCheck) < 0.04f)
                 {
@@ -1314,8 +1338,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 mBaseAi.m_NextCheckMovedDistanceTime = Time.time + 1.0f;
                 mBaseAi.m_PositionAtLastMoveCheck = mBaseAi.m_CachedTransform.position;
             }
+            //Section A
             if (mBaseAi.m_PickedWanderDestination == false)
-            {  
+            {
                 if (mBaseAi.Moose != null && !mBaseAi.m_UseWanderAwayFromPos)
                 {
                     hasNewWanderPos = mBaseAi.Moose?.MaybeSelectScratchingStump(out wanderPos) ?? false;
@@ -1325,15 +1350,18 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     }
                 }
 
-                if (!mBaseAi.m_UseWanderAwayFromPos && mBaseAi.m_UseWanderToPos)
+                if (!mBaseAi.m_UseWanderAwayFromPos)
                 {
-                    mBaseAi.m_CurrentWanderPos = mBaseAi.transform.position;
-                    hasNewWanderPos = AiUtils.GetClosestNavmeshPos(out Vector3 closestNavMeshPos, mBaseAi.m_WanderToPos, mBaseAi.m_CachedTransform.position);
-                    if (hasNewWanderPos)
+                    if (mBaseAi.m_UseWanderToPos)
                     {
-                        mBaseAi.m_CurrentWanderPos = closestNavMeshPos;
+                        mBaseAi.m_CurrentWanderPos = mBaseAi.transform.position;
+                        hasNewWanderPos = AiUtils.GetClosestNavmeshPos(out wanderPos, mBaseAi.m_WanderToPos, mBaseAi.m_CachedTransform.position);
+                        if (hasNewWanderPos)
+                        {
+                            mBaseAi.m_CurrentWanderPos = wanderPos;
+                        }
+                        mBaseAi.m_UseWanderToPos = false;
                     }
-                    mBaseAi.m_UseWanderToPos = false;
                 }
                 else
                 {
@@ -1355,6 +1383,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     if (mBaseAi.m_WildlifeMode == WildlifeMode.Aurora)
                     {
                         hasNewWanderPos = mBaseAi.MaybeMoveWanderPosOutsideOfField(out wanderPos, mBaseAi.m_CurrentWanderPos);
+
                     }
                 }
 
@@ -1371,7 +1400,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     mBaseAi.m_CurrentWanderPos = wanderPos;
                 }
 
-                if (mBaseAi.m_WanderUseTurnRadius == false)
+                if (!mBaseAi.m_WanderUseTurnRadius)
                 {
                     hasNewWanderPos = mBaseAi.StartPath(mBaseAi.m_CurrentWanderPos, mBaseAi.m_WalkSpeed);
                 }
@@ -1381,7 +1410,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     mBaseAi.m_WanderCurrentTarget = 0;
                     if (mBaseAi.m_WanderTurnTargets.Count == 0)
                     {
-                        Log($"No wander turn targets, this should be an error but we'll log and return for debug to start");
                         return;
                     }
                     hasNewWanderPos = mBaseAi.StartPath(mBaseAi.m_WanderTurnTargets[0], mBaseAi.m_WalkSpeed);
@@ -1396,106 +1424,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 mBaseAi.m_PickedWanderDestination = true;
             }
 
-            //TODO: Re-program getting away from aurora fields, this is broken in your edition now.
-            /* Spent literal hours trying to decode this. As far as I can tell it's trying to determine which aurora field to move away from? We might be able to re-program ourselves.
-            if ((mBaseAi.m_WildlifeMode == WildlifeMode.Aurora) && (mBaseAi.m_IsGettingAwayFromAuroraField == false))
-            {
-                Vector3 cachedPos = Vector3.zero;
-                if (((object)mBaseAi) is SplineNode splineNodeSelf)
-                {
-                    Log("SplineNode found!");
-                    cachedPos = splineNodeSelf.Transform.position;
-                }
-                else
-                {
-                    cachedPos = mBaseAi.transform.position;
-                }
-
-                float closestDist = float.MaxValue;
-                Il2CppSystem.Collections.Generic.List<AuroraField> lVar6 = AuroraManager.m_AuroraFieldsSceneManager.m_RegisteredAuroraFields;
-                uint uVar11 = 0U;
-                BaseAi pBVar18 = mBaseAi;
-                BaseAi __this_01 = mBaseAi;
-                while (lVar6 != null)
-                {   
-                    uVar11 = (uint)pBVar18;
-                    if (*(int*)(lVar6 + 0x18) <= (int)uVar11)
-                    {
-                        if (__this_01 != null)
-                        {
-                            if (__this_01.m_UseAimingElboHints)
-                            {
-                                goto LAB_18055f3b6;
-                            }
-
-                            mBaseAi.m_UseWanderAwayFromPos = true;
-                            if (__this_01)
-
-                            pUVar15 = SuperSplines.SplineNode$$get_Transform
-                                                ((SuperSplines_SplineNode_o*)__this_01,
-                                                    (MethodInfo*)0x0);
-                            if (pUVar15 != (UnityEngine_Transform_o*)0x0)
-                            {
-                                mBaseAi.m_WanderAwayFromPos = __this_01.transform.position;
-                                mBaseAi.m_PickedWanderDestination = false;
-                                mBaseAi.m_IsGettingAwayFromAuroraField = true;
-                                goto LAB_18055f3b6;
-                            }
-                        }
-                        break;
-                    }
-                    if (lVar6 == 0) break;
-                    lVar6 = *(longlong*)(lVar6 + 0x10);
-                    if (lVar6 == 0) break;
-                    pBVar18 = *(BaseAi_o**)(lVar6 + 0x20 + (longlong)(int)uVar11 * 8);
-                    if (pBVar18 == (BaseAi_o*)0x0) break;
-                    if (pBVar18.m_LeftHandTarget != null)
-                    {
-                        pUVar15 = SuperSplines.SplineNode$$get_Transform((SuperSplines_SplineNode_o*)pBVar18, (MethodInfo*)0x0);
-                        if (pUVar15 == (UnityEngine_Transform_o*)0x0) break;
-                        local_78.x = 0.0;
-                        local_78.y = 0.0;
-                        local_78.z = 0.0;
-                        pcVar12 = DAT_1843f8f20;
-                        if ((DAT_1843f8f20 == (code*)0x0) &&
-                            (pcVar12 = (code*)FUN_1802f1f40(
-                                                    "UnityEngine.Transform::get_position_Injected(Unit yEngine.Vector3&)"
-                                                    ), pcVar12 == (code*)0x0))
-                        {
-                            uVar17 = FUN_1802f1ba0(
-                                                    "UnityEngine.Transform::get_position_Injected(Unit yEngine.Vector3&)"
-                                                    );
-                            FUN_1802efda0(uVar17, 0);
-                            pcVar12 = (code*)swi(3);
-                            (*pcVar12)();
-                            return;
-                        }
-                        DAT_1843f8f20 = pcVar12;
-                        (*DAT_1843f8f20)(pUVar15, &local_78);
-                        uVar3 = local_88._0_8_;
-                        local_98.z = local_78.z;
-                        local_68[0].z = local_88.z;
-                        local_98.x = local_78.x;
-                        local_98.y = local_78.y;
-                        local_88.x = cachedPos.x;
-                        local_88.y = cachedPos.y;
-                        local_68[0].x = local_88.x;
-                        local_68[0].y = local_88.y;
-                        local_88._0_8_ = uVar3;
-                        fVar22 = (float)FUN_1804cb5a0(local_68, &local_98);
-                        if (fVar22 < closestDist)
-                        {
-                            __this_01 = pBVar18;
-                            closestDist = fVar22;
-                        }
-                    }
-                    pBVar18 = (BaseAi_o*)(ulonglong)(uVar11 + 1);
-                    lVar6 = *(longlong*)(lVar13 + 0x18);
-                }
-            }
-            LAB_18055f3b6:
-            */
-
+            //todo: handle weird-ass low level redundancy for getting aurora ai's out of active aurora fields
 
             if (mBaseAi.m_MoveAgent.m_DestinationReached)
             {
@@ -1526,8 +1455,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             mBaseAi.MaybeHoldGroundAuroraField();
             mBaseAi.MaybeEnterWanderPause();
-
-
             if (mBaseAi.Bear?.ShouldAlwaysStalkPlayer() ?? false)
             {
                 mBaseAi.MaybeForceStalkPlayer();
@@ -1535,7 +1462,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             UniStormWeatherSystem uniStormWeatherSystem = GameManager.m_TimeOfDay.m_WeatherSystem;
             mBaseAi.m_ElapsedWanderHours += (24.0f / (uniStormWeatherSystem.m_DayLengthScale * uniStormWeatherSystem.m_DayLength)) * Time.deltaTime;
-
         }
 
 
@@ -1604,6 +1530,58 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected virtual void ProcessPatrolPointsOfInterest()
         {
             mBaseAi.ProcessPatrolPointsOfInterest();
+            return;
+
+            // Thought this was needed but the behaviour I was looking for is "FollowWaypoints" not follow points of interest, which reset and are temporary. Waypoints appear to be permanent.
+            if (mBaseAi.m_PlayingAttackStartAnimation)
+            {
+                AiUtils.TurnTowardsTarget(mBaseAi);
+                mBaseAi.MaybeApplyAttack();
+                if (5.0 < mBaseAi.m_TimeInModeSeconds)
+                {
+                    mBaseAi.m_PlayingAttackStartAnimation = false;
+                    MaybeHoldGround();
+                }
+                return;
+            }
+            if (!mBaseAi.m_HasEnteredPatrolPointsOfInterest)
+            {
+                //Log("mBaseAi.m_HasEnteredPatrolPointsOfInteres is false, picking poi index and starting pathfinding");
+                mBaseAi.ClearTarget();
+                if (!mBaseAi.m_RandomizePointsOfInterest)
+                {
+                    mBaseAi.m_TargetPointOfInterestIndex = 0;
+                }
+                else
+                {
+                    mBaseAi.m_TargetPointOfInterestIndex = UnityEngine.Random.Range(0, mBaseAi.m_ActivePointsOfInterest.Count - 1);
+                }
+                //Log($"Picked POI index {mBaseAi.m_TargetPointOfInterestIndex}");
+                mBaseAi.m_AiGoalSpeed = mBaseAi.m_WalkSpeed;
+                mBaseAi.m_DefaultMode = (AiMode)0x16;
+                mBaseAi.PathfindToPointOfInterest(mBaseAi.m_TargetPointOfInterestIndex);
+                mBaseAi.m_HasEnteredPatrolPointsOfInterest = true;
+            }
+            if (!mBaseAi.m_IsAnimatingAtPointOfInterest)
+            {
+                if (mBaseAi.ReachedTargetPointOfInterest())
+                {
+                    //Log($"Target has reached POI and is not animating, triggering DoReachedTargetOfPointOfInterestBehavior");
+                    mBaseAi.DoReachedTargetPointOfInterestBehavior();
+                }
+            }
+            else
+            {
+                //Log($"Not animating at POI, incrementing time in mode");
+                mBaseAi.m_ElapsedTimeAtPointOfInterestSeconds += (86400.0f / (GameManager.m_TimeOfDay.m_WeatherSystem.m_DayLengthScale * GameManager.m_TimeOfDay.m_WeatherSystem.m_DayLength)) * Time.deltaTime;
+                if (BaseAi.m_DurationAtPointOfInterestSeconds < mBaseAi.m_ElapsedTimeAtPointOfInterestSeconds)
+                {
+                    //Log($"BaseAi.m_DurationAtPointOfInterestSeconds ({BaseAi.m_DurationAtPointOfInterestSeconds}) < mBaseAi.m_ElapsedTimeAtPointOfInterestSeconds ({mBaseAi.m_ElapsedTimeAtPointOfInterestSeconds}), triggering next POI");
+                    BaseAi.PathfindToNextPointOfInterest();
+                }
+            }
+            mBaseAi.ScanForNewTarget();
+            mBaseAi.ScanForSmells();
         }
 
 
@@ -1667,7 +1645,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             holdingGround = holdingGround || mBaseAi.MaybeHoldGroundDueToStruggle();
             if (holdingGround)
             {
-                SetAiMode(AiMode.HoldGround); 
+                Log("Setting AiMode to holdground!");
+                SetAiMode(AiMode.HoldGround);
             }
         }
 
@@ -1848,6 +1827,13 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected virtual float m_ExtraMarginForStopInField { get { return mBaseAi.m_ExtraMarginForStopInField; } }
         protected virtual float m_MinDistanceToHoldFromInnerRadius { get { return mBaseAi.m_MinDistanceToHoldFromInnerRadius; } }
 
+
+        #endregion
+
+
+        #region CustomAi Properties (overridable too!)
+
+        protected virtual float m_MaxWaypointDistance { get { return 1.0f; } }
 
         #endregion
     }

@@ -12,29 +12,25 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
     public class BigWolf : BaseWolf
     {
-        protected float mAugmentFactor;
         public override WolfTypes WolfType { get { return WolfTypes.BigWolf; } }
 
-        public BigWolf(BaseAi target, float augmentFactor = 0f) : base(target) { mAugmentFactor = augmentFactor; }
+        public BigWolf(BaseAi target) : base(target) { }
 
 
         public override void Augment()
         {
-            if (mBaseAi.gameObject?.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer renderer) ?? false)
+            if (mBaseAi.gameObject?.TryGetComponent(out SkinnedMeshRenderer renderer) ?? false)
             {
                 renderer.sharedMaterial.color = Color.red;
             }
-            if (mAugmentFactor > 10f || mAugmentFactor < 5f)
-            {
-                mAugmentFactor = new System.Random().Next(500, 1000) * 0.01f;
-            }
-            mBaseAi.m_RunSpeed *= (mAugmentFactor * mAugmentFactor);
-            mBaseAi.m_StalkSpeed *= (mAugmentFactor * mAugmentFactor);
-            mBaseAi.m_WalkSpeed *= (mAugmentFactor * mAugmentFactor);
-            mBaseAi.m_turnSpeed *= (mAugmentFactor * (mAugmentFactor * mAugmentFactor));
-            mBaseAi.m_TurnSpeedDegreesPerSecond *= (mAugmentFactor * mAugmentFactor);
-            Vector3 newScale = new Vector3(mAugmentFactor, mAugmentFactor, mAugmentFactor);
+            mBaseAi.m_RunSpeed *= 8;
+            mBaseAi.m_StalkSpeed *= 8;
+            mBaseAi.m_WalkSpeed *= 8;
+            mBaseAi.m_turnSpeed *= 8;
+            mBaseAi.m_TurnSpeedDegreesPerSecond *= 8;
+            Vector3 newScale = new Vector3(2, 2, 2);
             mBaseAi.gameObject.transform.set_localScale_Injected(ref newScale);
+            base.Augment();
         }
 
 
