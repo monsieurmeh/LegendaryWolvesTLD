@@ -1,6 +1,7 @@
 ﻿#define DEV_BUILD_STATELABEL
 
 using Il2Cpp;
+using Il2CppTLD.AI;
 using UnityEngine;
 using static Il2Cpp.BaseAi;
 using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
@@ -10,6 +11,104 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
     public class CustomAiBase : ICustomAi
     {
+        private static Dictionary<AiMode, Action<CustomAiBase>> ExitAiModeDictionary = new Dictionary<AiMode, Action<CustomAiBase>>()
+        {
+            {AiMode.None,                   (ai) => { }                                     },
+            {AiMode.Attack,                 (ai) => ai.ExitAttack()                         },
+            {AiMode.Dead,                   (ai) => ai.ExitDead()                           },
+            {AiMode.Feeding,                (ai) => ai.ExitFeeding()                        },
+            {AiMode.Flee,                   (ai) => ai.ExitFlee()                           },
+            {AiMode.FollowWaypoints,        (ai) => ai.ExitFollowWaypoints()                },
+            {AiMode.HoldGround,             (ai) => ai.ExitHoldGround()                     },
+            {AiMode.Idle,                   (ai) => ai.ExitIdle()                           },
+            {AiMode.Investigate,            (ai) => ai.ExitInvestigate()                    },
+            {AiMode.InvestigateFood,        (ai) => ai.ExitInvestigateFood()                },
+            {AiMode.InvestigateSmell,       (ai) => ai.ExitInvestigateSmell()               },
+            {AiMode.Rooted,                 (ai) => ai.ExitRooted()                         },
+            {AiMode.Sleep,                  (ai) => ai.ExitSleep()                          },
+            {AiMode.Stalking,               (ai) => ai.ExitStalking()                       },
+            {AiMode.Struggle,               (ai) => ai.ExitStruggle()                       },
+            {AiMode.Wander,                 (ai) => ai.ExitWander()                         },
+            {AiMode.WanderPaused,           (ai) => ai.ExitWanderPaused()                   },
+            {AiMode.GoToPoint,              (ai) => ai.ExitGoToPoint()                      },
+            {AiMode.InteractWithProp,       (ai) => ai.ExitInteractWithProp()               },
+            {AiMode.ScriptedSequence,       (ai) => ai.ExitScriptedSequence()               },
+            {AiMode.Stunned,                (ai) => ai.ExitStunned()                        },
+            {AiMode.ScratchingAntlers,      (ai) => ai.ExitScratchingAntlers()              },
+            {AiMode.PatrolPointsOfInterest, (ai) => ai.ExitPatrolPointsOfInterest()         },
+            {AiMode.HideAndSeek,            (ai) => ai.ExitHideAndSeek()                    },
+            {AiMode.JoinPack,               (ai) => ai.ExitJoinPack()                       },
+            {AiMode.PassingAttack,          (ai) => ai.ExitPassingAttack()                  },
+            {AiMode.Howl,                   (ai) => ai.ExitHowl()                           },
+            {AiMode.Disabled,               (ai) => { }                                     },
+            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.ExitHiding()}
+        };
+        private static Dictionary<AiMode, Action<CustomAiBase>> EnterAiModeDictionary = new Dictionary<AiMode, Action<CustomAiBase>>()
+        {
+            {AiMode.None,                   (ai) => { }                                     },
+            {AiMode.Attack,                 (ai) => ai.EnterAttack()                         },
+            {AiMode.Dead,                   (ai) => ai.EnterDead()                           },
+            {AiMode.Feeding,                (ai) => ai.EnterFeeding()                        },
+            {AiMode.Flee,                   (ai) => ai.EnterFlee()                           },
+            {AiMode.FollowWaypoints,        (ai) => ai.EnterFollowWaypoints()                },
+            {AiMode.HoldGround,             (ai) => ai.EnterHoldGround()                     },
+            {AiMode.Idle,                   (ai) => ai.EnterIdle()                           },
+            {AiMode.Investigate,            (ai) => ai.EnterInvestigate()                    },
+            {AiMode.InvestigateFood,        (ai) => ai.EnterInvestigateFood()                },
+            {AiMode.InvestigateSmell,       (ai) => ai.EnterInvestigateSmell()               },
+            {AiMode.Rooted,                 (ai) => ai.EnterRooted()                         },
+            {AiMode.Sleep,                  (ai) => ai.EnterSleep()                          },
+            {AiMode.Stalking,               (ai) => ai.EnterStalking()                       },
+            {AiMode.Struggle,               (ai) => ai.EnterStruggle()                       },
+            {AiMode.Wander,                 (ai) => ai.EnterWander()                         },
+            {AiMode.WanderPaused,           (ai) => ai.EnterWanderPaused()                   },
+            {AiMode.GoToPoint,              (ai) => ai.EnterGoToPoint()                      },
+            {AiMode.InteractWithProp,       (ai) => ai.EnterInteractWithProp()               },
+            {AiMode.ScriptedSequence,       (ai) => ai.EnterScriptedSequence()               },
+            {AiMode.Stunned,                (ai) => ai.EnterStunned()                        },
+            {AiMode.ScratchingAntlers,      (ai) => ai.EnterScratchingAntlers()              },
+            {AiMode.PatrolPointsOfInterest, (ai) => ai.EnterPatrolPointsOfInterest()         },
+            {AiMode.HideAndSeek,            (ai) => ai.EnterHideAndSeek()                    },
+            {AiMode.JoinPack,               (ai) => ai.EnterJoinPack()                       },
+            {AiMode.PassingAttack,          (ai) => ai.EnterPassingAttack()                  },
+            {AiMode.Howl,                   (ai) => ai.EnterHowl()                           },
+            {AiMode.Disabled,               (ai) => { }                                      },
+            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.EnterHiding()}
+        }; 
+        private static Dictionary<AiMode, Action<CustomAiBase>> ProcessAiModeDictionary = new Dictionary<AiMode, Action<CustomAiBase>>()
+        {
+            {AiMode.None,                   (ai) => { }                                     },
+            {AiMode.Attack,                 (ai) => ai.ProcessAttack()                         },
+            {AiMode.Dead,                   (ai) => ai.ProcessDead()                           },
+            {AiMode.Feeding,                (ai) => ai.ProcessFeeding()                        },
+            {AiMode.Flee,                   (ai) => ai.ProcessFlee()                           },
+            {AiMode.FollowWaypoints,        (ai) => ai.ProcessFollowWaypoints()                },
+            {AiMode.HoldGround,             (ai) => ai.ProcessHoldGround()                     },
+            {AiMode.Idle,                   (ai) => ai.ProcessIdle()                           },
+            {AiMode.Investigate,            (ai) => ai.ProcessInvestigate()                    },
+            {AiMode.InvestigateFood,        (ai) => ai.ProcessInvestigateFood()                },
+            {AiMode.InvestigateSmell,       (ai) => ai.ProcessInvestigateSmell()               },
+            {AiMode.Rooted,                 (ai) => ai.ProcessRooted()                         },
+            {AiMode.Sleep,                  (ai) => ai.ProcessSleep()                          },
+            {AiMode.Stalking,               (ai) => ai.ProcessStalking()                       },
+            {AiMode.Struggle,               (ai) => ai.ProcessStruggle()                       },
+            {AiMode.Wander,                 (ai) => ai.ProcessWander()                         },
+            {AiMode.WanderPaused,           (ai) => ai.ProcessWanderPaused()                   },
+            {AiMode.GoToPoint,              (ai) => ai.ProcessGoToPoint()                      },
+            {AiMode.InteractWithProp,       (ai) => ai.ProcessInteractWithProp()               },
+            {AiMode.ScriptedSequence,       (ai) => ai.ProcessScriptedSequence()               },
+            {AiMode.Stunned,                (ai) => ai.ProcessStunned()                        },
+            {AiMode.ScratchingAntlers,      (ai) => ai.ProcessScratchingAntlers()              },
+            {AiMode.PatrolPointsOfInterest, (ai) => ai.ProcessPatrolPointsOfInterest()         },
+            {AiMode.HideAndSeek,            (ai) => ai.ProcessHideAndSeek()                    },
+            {AiMode.JoinPack,               (ai) => ai.ProcessJoinPack()                       },
+            {AiMode.PassingAttack,          (ai) => ai.ProcessPassingAttack()                  },
+            {AiMode.Howl,                   (ai) => ai.ProcessHowl()                           },
+            {AiMode.Disabled,               (ai) => { }                                      },
+            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.ProcessHiding()}
+        };
+
+
         public CustomAiBase(BaseAi baseAi)
         {
             mBaseAi = baseAi;
@@ -110,7 +209,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return;
             }
-            if ((!mBaseAi.IsMoveAgent() || !mBaseAi.m_MoveAgent.enabled && !mBaseAi.m_NavMeshAgent) && (!mBaseAi.m_FirstFrame && mBaseAi.m_CurrentMode == AiMode.Dead))
+            if ((!mBaseAi.IsMoveAgent() || !mBaseAi.m_MoveAgent.enabled && !mBaseAi.m_NavMeshAgent) && (!mBaseAi.m_FirstFrame && CurrentMode == AiMode.Dead))
             {
                 ProcessDead();
                 return;
@@ -123,7 +222,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 SetAiMode(AiMode.Dead);
                 if (mBaseAi.GetHitInfoUnderPivot(out RaycastHit hitInfo))
                 {
-                    mBaseAi.AlignTransformWithNormal(hitInfo.point, hitInfo.normal, mBaseAi.m_CurrentMode != AiMode.Dead, true);
+                    mBaseAi.AlignTransformWithNormal(hitInfo.point, hitInfo.normal, CurrentMode != AiMode.Dead, true);
                 }
                 mBaseAi.m_ForceToCorpse = false;
                 GameAudioManager.StopAllSoundsFromGameObject(mBaseAi.gameObject);
@@ -173,14 +272,14 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             if (mBaseAi.m_CurrentHP <= 0.0001f)
             {
-                if (mBaseAi.m_CurrentMode == AiMode.Dead)
+                if (CurrentMode == AiMode.Dead)
                 {
                     return;
                 }
                 SetAiMode(AiMode.Dead);
             }
 
-            if (mBaseAi.m_CurrentMode != AiMode.Dead)
+            if (CurrentMode != AiMode.Dead)
             {
                 AiMode mode = CurrentMode;
                 mBaseAi.MaybeRestoreTargetAfterSpear();
@@ -193,104 +292,19 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected virtual void Process()
+        protected void Process()
         {
-            switch (mBaseAi?.m_CurrentMode ?? AiMode.None)
-            {
-                case AiMode.Idle:
-                    ProcessIdle();
-                    break;
-                case AiMode.Sleep:
-                    ProcessSleep();
-                    break;
-                case AiMode.Stalking:
-                    ProcessStalking();
-                    break;
-                case AiMode.WanderPaused:
-                    ProcessWanderPaused();
-                    break;
-                case AiMode.GoToPoint:
-                    ProcessGoToPoint();
-                    break;
-                case AiMode.Stunned:
-                    ProcessStunned();
-                    break;
-                case AiMode.ScratchingAntlers:
-                    ProcessScratchingAntlers();
-                    break;
-                case AiMode.HideAndSeek:
-                    ProcessHideAndSeek();
-                    break;
-                case AiMode.JoinPack:
-                    ProcessJoinPack();
-                    break;
-                case AiMode.Howl:
-                    ProcessHowl();
-                    break;
-                case AiMode.Attack:
-                    ProcessAttack();
-                    break;
-                case AiMode.Dead:
-                    ProcessDead();
-                    break;
-                case AiMode.Feeding:
-                    ProcessFeeding();
-                    break;
-                case AiMode.Flee:
-                    ProcessFlee();
-                    break;
-                case AiMode.FollowWaypoints:
-                    ProcessFollowWaypoints();
-                    break;
-                case AiMode.HoldGround:
-                    ProcessHoldGround();
-                    break;
-                case AiMode.Investigate:
-                    ProcessInvestigate();
-                    break;
-                case AiMode.InvestigateFood:
-                    ProcessInvestigateFood();
-                    break;
-                case AiMode.InvestigateSmell:
-                    ProcessInvestigateSmell();
-                    break;
-                case AiMode.Rooted:
-                    ProcessRooted();
-                    break;
-                case AiMode.Struggle:
-                    ProcessStruggle();
-                    break;
-                case AiMode.Wander:
-                    ProcessWander();
-                    break;
-                case AiMode.InteractWithProp:
-                    ProcessInteractWithProp();
-                    break;
-                case AiMode.ScriptedSequence:
-                    ProcessScriptedSequence();
-                    break;
-                case AiMode.PatrolPointsOfInterest:
-                    ProcessPatrolPointsOfInterest();
-                    break;
-                case AiMode.PassingAttack:
-                    ProcessPassingAttack();
-                    break;
-                case AiMode.Disabled:
-                case AiMode.None:
-                default:
-                    break;
-            }
-            return;
+            ProcessAiModeDictionary[CurrentMode].Invoke(this);
         }
 
 
         protected virtual void PostProcess()
         {
-            if (mBaseAi.m_CurrentMode == AiMode.Dead || mBaseAi.m_CurrentMode == AiMode.ScriptedSequence)
+            if (CurrentMode == AiMode.Dead || CurrentMode == AiMode.ScriptedSequence)
             {
                 return;
             }
-            if (mBaseAi.IsImposter())
+            if (IsImposter())
             {
                 return;
             }
@@ -306,7 +320,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             mBaseAi.m_MoveAgent.m_MaxSpeed = mBaseAi.m_SpeedFromMecanimBone != null ? mBaseAi.GetSpeedFromMecanimBone() : mBaseAi.m_AiGoalSpeed;
             mBaseAi.m_MoveAgent.m_RotationSpeed =
-                (mBaseAi.m_CurrentMode != AiMode.Wander
+                (CurrentMode != AiMode.Wander
                 && mBaseAi.m_WanderTurnTargets != null
                 && mBaseAi.m_WanderTurnTargets.Count > 1
                 && mBaseAi.m_WanderCurrentTarget > mBaseAi.m_WanderTurnTargets.Count)
@@ -717,18 +731,162 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #endregion
 
 
-        #region Hinterland Overrides
+        #region Overrides
 
-        //Don't think we need to override this unless we end up having seriously conflicting behaviours during EnterXYZ() type methods
-        public virtual void SetAiMode(AiMode mode)
+        #region Properties
+
+        //In theory, these should still be affected by other mods which primarily tweak existing fields at awake
+        // In the future if we decide to create new mod-specific default values, we'll need to cache the "official" hinterland version and do our own on start (not awake to ensure that other mods get to it first) check to see if props match HL defaults, and ignore them if not because someone else got to them
+
+        protected virtual float m_HoldGroundDistanceFromSpear { get { return mBaseAi.m_HoldGroundDistanceFromSpear; } }
+        protected virtual float m_HoldGroundOuterDistanceFromSpear { get { return mBaseAi.m_HoldGroundOuterDistanceFromSpear; } }
+        protected virtual float m_HoldGroundDistanceFromBlueFlare { get { return mBaseAi.m_HoldGroundDistanceFromBlueFlare; } }
+        protected virtual float m_HoldGroundOuterDistanceFromBlueFlare { get { return mBaseAi.m_HoldGroundOuterDistanceFromBlueFlare; } }
+        protected virtual float m_HoldGroundDistanceFromBlueFlareOnGround { get { return mBaseAi.m_HoldGroundDistanceFromBlueFlareOnGround; } }
+        protected virtual float m_HoldGroundOuterDistanceFromBlueFlareOnGround { get { return mBaseAi.m_HoldGroundOuterDistanceFromBlueFlareOnGround; } }
+        protected virtual float m_HoldGroundDistanceFromFire { get { return mBaseAi.m_HoldGroundDistanceFromFire; } }
+        protected virtual float m_HoldGroundOuterDistanceFromFire { get { return mBaseAi.m_HoldGroundOuterDistanceFromFire; } }
+        protected virtual float m_HoldGroundDistanceFromFlare { get { return mBaseAi.m_HoldGroundDistanceFromFlare; } }
+        protected virtual float m_HoldGroundOuterDistanceFromFlare { get { return mBaseAi.m_HoldGroundOuterDistanceFromFlare; } }
+        protected virtual float m_HoldGroundDistanceFromFlareOnGround { get { return mBaseAi.m_HoldGroundDistanceFromFlareOnGround; } }
+        protected virtual float m_HoldGroundOuterDistanceFromFlareOnGround { get { return mBaseAi.m_HoldGroundOuterDistanceFromFlareOnGround; } }
+        protected virtual float m_HoldGroundDistanceFromTorch { get { return mBaseAi.m_HoldGroundDistanceFromTorch; } }
+        protected virtual float m_HoldGroundOuterDistanceFromTorch { get { return mBaseAi.m_HoldGroundOuterDistanceFromTorch; } }
+        protected virtual float m_HoldGroundDistanceFromTorchOnGround { get { return mBaseAi.m_HoldGroundDistanceFromTorchOnGround; } }
+        protected virtual float m_HoldGroundOuterDistanceFromTorchOnGround { get { return mBaseAi.m_HoldGroundOuterDistanceFromTorchOnGround; } }
+        protected virtual float m_MinDistanceToKeepWithSafeHaven { get { return mBaseAi.m_MinDistanceToKeepWithSafeHaven; } }
+        protected virtual float m_ExtraMarginForStopInField { get { return mBaseAi.m_ExtraMarginForStopInField; } }
+        protected virtual float m_MinDistanceToHoldFromInnerRadius { get { return mBaseAi.m_MinDistanceToHoldFromInnerRadius; } }
+        protected virtual float m_MaxWaypointDistance { get { return 1.0f; } }
+        protected virtual float m_MinWaypointDistance { get { return 0.0f; } }
+
+        #endregion
+
+
+        #region SetAiMode
+
+        //Eventually a lot of these can be moved into more appropriate subclasses, like AI for stags and AI for timberwolves specifically
+        protected virtual AiMode PreprocessNewAiMode(AiMode mode)
         {
-            mSetAiModeLock = true;
-            mBaseAi.SetAiMode(mode);
-            mSetAiModeLock = false;
+            if (mode == AiMode.Flee)
+            {
+                if (CurrentMode == AiMode.Flee && mBaseAi.m_FleeReason == AiFleeReason.AfterPassingAttack)
+                {
+                    return AiMode.None;
+                }
+            }
+            else if (mode == AiMode.Attack)
+            {
+                if (mBaseAi.IsTooScaredToAttack())
+                {
+                    return AiMode.None;
+                }
+                bool skip = false;
+                if (mBaseAi.Timberwolf != null)
+                {
+                    if (mBaseAi.m_CurrentTarget.IsPlayer())
+                    {
+                        if (CurrentMode == AiMode.Attack)
+                        {
+                            return AiMode.None;
+                        }
+                        if (PackManager.InPack(mBaseAi.m_PackAnimal))
+                        {
+                            if (!GameManager.m_PackManager.CanAttack(mBaseAi.m_PackAnimal, false))
+                            {
+                                mode = AiMode.HoldGround;
+                            }
+                        }
+                        else
+                        {
+                            mode = AiMode.Flee;
+                        }
+                        skip = true;
+                    }
+                }
+                if (!skip)
+                {
+                    if (ShouldHoldGround())
+                    {
+                        SetAiMode(AiMode.HoldGround);
+                        return AiMode.None;
+                    }
+                    if (!mBaseAi.CanPathfindToPosition(mBaseAi.m_CurrentTarget.transform.position, MoveAgent.PathRequirement.FullPath))
+                    {
+                        mBaseAi.CantReachTarget();
+                        return AiMode.None;
+                    }
+                }
+            }
+            else if (mode == AiMode.Wander && mBaseAi.Timberwolf != null && PackManager.InPack(mBaseAi.m_PackAnimal) && GameManager.m_PackManager.IsPackCombatRestricted(mBaseAi.m_PackAnimal))
+            {
+                mode = AiMode.HoldGround;
+            }
+            if (mBaseAi is AiStagWhite && CurrentMode == AiMode.Flee)
+            {
+                return AiMode.None;
+            }
+            if (mode == AiMode.Wander || mode == AiMode.Flee)
+            {
+                if (mBaseAi.m_DefaultMode == AiMode.PatrolPointsOfInterest)
+                {
+                    mode = AiMode.PatrolPointsOfInterest;
+                }
+            }
+            else if (mode == AiMode.None)
+            {
+                mode = AiMode.Idle;
+            }
+            else if (mode == AiMode.Howl)
+            {
+                if (mBaseAi.BaseWolf != null)
+                {
+                    return AiMode.None;
+                }
+            }
+            if (mode == CurrentMode)
+            {
+                if (CurrentMode != AiMode.Flee)
+                {
+                    return AiMode.None;
+                }
+                if (mBaseAi.m_UseRetreatSpeedInFlee == false)
+                {
+                    return AiMode.None;
+                }
+                mBaseAi.m_UseRetreatSpeedInFlee = false;
+                mBaseAi.m_AiGoalSpeed = mBaseAi.GetFleeSpeed();
+                return AiMode.None;
+            }
+            if (CurrentMode == AiMode.Stunned && mBaseAi.IsStunTimerActive() && mode != AiMode.Dead && mode != AiMode.ScriptedSequence)
+            { 
+                return AiMode.None;
+            }
+            return mode;
         }
 
 
-        #region Process Overrides
+        public virtual void SetAiMode(AiMode mode)
+        {
+            mode = PreprocessNewAiMode(mode);
+            if (mode == AiMode.None)
+            {
+                return;
+            }
+            ExitAiModeDictionary[CurrentMode].Invoke(this);
+            EnterAiModeDictionary[mode].Invoke(this);
+            PreviousMode = CurrentMode;
+            CurrentMode = mode;
+            mBaseAi.m_TimeInModeSeconds = 0.0f;
+            mBaseAi.m_TimeInModeTODHours = 0.0f;
+            GameAudioManager.SetAiStateSwitch(CurrentMode, GameAudioManager.GetSoundEmitterProxyFromGameObject(mBaseAi.gameObject));
+        }
+
+
+        #endregion
+
+
+        #region Process
 
         protected virtual void ProcessAttack()
         {
@@ -1212,7 +1370,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mBaseAi.ClearTarget();
             mBaseAi.ScanForNewTarget();
             mBaseAi.ScanForSmells();
-            if (mBaseAi.m_CurrentMode != AiMode.Idle || mBaseAi.m_StartMode == AiMode.Idle)
+            if (CurrentMode != AiMode.Idle || mBaseAi.m_StartMode == AiMode.Idle)
                 return;
             if (mBaseAi.m_TimeInModeSeconds > 10.0f)
             {
@@ -1595,7 +1753,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #endregion
 
 
-        #region MaybeHoldGround overrides
+        #region MaybeHoldGround
 
 
         protected virtual void MaybeHoldGround()
@@ -1732,7 +1890,276 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #endregion
 
 
-        #region Other Overrides
+        #region ExitState
+
+        protected virtual void ExitAttack()
+        {
+            mBaseAi.ExitAttack();
+        }
+
+        protected virtual void ExitDead()
+        {
+            mBaseAi.ExitDead();
+        }
+
+        protected virtual void ExitFeeding()
+        {
+            mBaseAi.ExitFeeding();
+        }
+
+        protected virtual void ExitFlee()
+        {
+            mBaseAi.ExitFlee();
+        }
+
+        protected virtual void ExitFollowWaypoints()
+        {
+            mBaseAi.ExitFollowWaypoints();
+        }
+
+        protected virtual void ExitHoldGround()
+        {
+            mBaseAi.ExitHoldGround();
+        }
+
+        protected virtual void ExitIdle()
+        {
+            mBaseAi.ExitIdle();
+        }
+
+        protected virtual void ExitInvestigate()
+        {
+            mBaseAi.ExitInvestigate();
+        }
+
+        protected virtual void ExitInvestigateFood()
+        {
+            mBaseAi.ExitInvestigateFood();
+        }
+
+        protected virtual void ExitInvestigateSmell()
+        {
+            mBaseAi.ExitInvestigateSmell();
+        }
+
+        protected virtual void ExitRooted()
+        {
+
+        }
+
+        protected virtual void ExitSleep()
+        {
+            mBaseAi.ExitSleep();
+        }
+
+        protected virtual void ExitStalking()
+        {
+            mBaseAi.ExitStalking();
+        }
+
+        protected virtual void ExitStruggle()
+        {
+            mBaseAi.ExitStruggle();
+        }
+
+        protected virtual void ExitWander()
+        {
+            mBaseAi.ExitWander();
+        }
+
+        protected virtual void ExitWanderPaused()
+        {
+            mBaseAi.ExitWanderPaused();
+        }
+
+        protected virtual void ExitGoToPoint()
+        {
+            mBaseAi.ExitGoToPoint();
+        }
+
+        protected virtual void ExitInteractWithProp()
+        {
+            mBaseAi.ExitInteractWithProp();
+        }
+
+        protected virtual void ExitScriptedSequence()
+        {
+            mBaseAi.ExitScriptedSequence();
+        }
+
+        protected virtual void ExitStunned()
+        {
+            mBaseAi.ExitStunned();
+        }
+
+        protected virtual void ExitScratchingAntlers()
+        {
+            mBaseAi.Moose?.ExitScratchingAntlers();
+        }
+
+        protected virtual void ExitPatrolPointsOfInterest()
+        {
+            mBaseAi.ExitPatrolPointsOfInterest();
+        }
+
+        protected virtual void ExitHideAndSeek()
+        {
+            mBaseAi.Timberwolf?.ExitHideAndSeek();
+        }
+
+        protected virtual void ExitJoinPack()
+        {
+            mBaseAi.Timberwolf?.ExitJoinPack();
+        }
+
+        protected virtual void ExitPassingAttack()
+        {
+            //Nothing? Not sure...
+            //mBaseAi.Timberwolf?.Exit();
+        }
+
+        protected virtual void ExitHowl()
+        {
+            mBaseAi.BaseWolf?.ExitHowl();
+        }
+
+        #endregion
+
+
+        #region EnterState
+
+        protected virtual void EnterAttack()
+        {
+            mBaseAi.EnterAttack();
+        }
+
+        protected virtual void EnterDead()
+        {
+            mBaseAi.EnterDead();
+        }
+
+        protected virtual void EnterFeeding()
+        {
+            mBaseAi.EnterFeeding();
+        }
+
+        protected virtual void EnterFlee()
+        {
+            mBaseAi.EnterFlee();
+        }
+
+        protected virtual void EnterFollowWaypoints()
+        {
+            mBaseAi.EnterFollowWaypoints();
+        }
+
+        protected virtual void EnterHoldGround()
+        {
+            mBaseAi.EnterHoldGround();
+        }
+
+        protected virtual void EnterIdle()
+        {
+            mBaseAi.EnterIdle();
+        }
+
+        protected virtual void EnterInvestigate()
+        {
+            mBaseAi.EnterInvestigate();
+        }
+
+        protected virtual void EnterInvestigateFood()
+        {
+            mBaseAi.EnterInvestigateFood();
+        }
+
+        protected virtual void EnterInvestigateSmell()
+        {
+            mBaseAi.EnterInvestigateSmell();
+        }
+
+        protected virtual void EnterRooted()
+        {
+            mBaseAi.MoveAgentStop();
+        }
+
+        protected virtual void EnterSleep()
+        {
+            mBaseAi.EnterSleep();
+        }
+
+        protected virtual void EnterStalking()
+        {
+            mBaseAi.EnterStalking();
+        }
+
+        protected virtual void EnterStruggle()
+        {
+            mBaseAi.EnterStruggle();
+        }
+
+        protected virtual void EnterWander()
+        {
+            mBaseAi.EnterWander();
+        }
+
+        protected virtual void EnterWanderPaused()
+        {
+            mBaseAi.EnterWanderPaused();
+        }
+
+        protected virtual void EnterGoToPoint()
+        {
+            mBaseAi.EnterGoToPoint();
+        }
+
+        protected virtual void EnterInteractWithProp()
+        {
+            mBaseAi.EnterInteractWithProp();
+        }
+
+        protected virtual void EnterScriptedSequence()
+        {
+            mBaseAi.EnterScriptedSequence();
+        }
+
+        protected virtual void EnterStunned()
+        {
+            mBaseAi.EnterStunned();
+        }
+
+        protected virtual void EnterScratchingAntlers()
+        {
+            mBaseAi.Moose?.EnterScratchingAntlers();
+        }
+
+        protected virtual void EnterPatrolPointsOfInterest()
+        {
+            mBaseAi.EnterPatrolPointsOfInterest();
+        }
+
+        protected virtual void EnterHideAndSeek()
+        {
+            mBaseAi.Timberwolf?.EnterHideAndSeek();
+        }
+
+        protected virtual void EnterJoinPack()
+        {
+            mBaseAi.Timberwolf?.EnterJoinPack();
+        }
+
+        protected virtual void EnterPassingAttack()
+        {
+            mBaseAi.Timberwolf?.EnterPassingAttack();
+        }
+
+        protected virtual void EnterHowl()
+        {
+            mBaseAi.BaseWolf?.EnterHowl();
+        }
+
+        #endregion
+
 
         protected virtual void MaybeImposter()
         {
@@ -1745,21 +2172,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             return mBaseAi.IsImposter();
         }
 
-        #endregion
-
-        #endregion
-
-
-        #region Sub-Processes
 
         protected virtual void FirstFrame()
         {
-            if (mBaseAi.m_CurrentMode != AiMode.Dead)
+            if (CurrentMode != AiMode.Dead)
             {
                 mBaseAi.StickCharacterControllerToGround();
                 if (mBaseAi.GetHitInfoUnderCharacterController(out RaycastHit hitInfo, FindGroundType.FirstTime))
                 {
-                    mBaseAi.AlignTransformWithNormal(hitInfo.point, hitInfo.normal, mBaseAi.m_CurrentMode != AiMode.Dead, true);
+                    mBaseAi.AlignTransformWithNormal(hitInfo.point, hitInfo.normal, CurrentMode != AiMode.Dead, true);
                 }
             }
             mBaseAi.DoCustomModeModifiers();
@@ -1800,43 +2221,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             return true;
         }
 
-        #endregion
-
-
-        #region AI Property Overrides
-
-        //In theory, these should still be affected by other mods which primarily tweak existing fields at awake
-        // In the future if we decide to create new mod-specific default values, we'll need to cache the "official" hinterland version and do our own on start (not awake to ensure that other mods get to it first) check to see if props match HL defaults, and ignore them if not because someone else got to them
-
-        protected virtual float m_HoldGroundDistanceFromSpear { get { return mBaseAi.m_HoldGroundDistanceFromSpear; } }
-        protected virtual float m_HoldGroundOuterDistanceFromSpear { get { return mBaseAi.m_HoldGroundOuterDistanceFromSpear; } }
-        protected virtual float m_HoldGroundDistanceFromBlueFlare { get { return mBaseAi.m_HoldGroundDistanceFromBlueFlare; } }
-        protected virtual float m_HoldGroundOuterDistanceFromBlueFlare { get { return mBaseAi.m_HoldGroundOuterDistanceFromBlueFlare; } }
-        protected virtual float m_HoldGroundDistanceFromBlueFlareOnGround { get { return mBaseAi.m_HoldGroundDistanceFromBlueFlareOnGround; } }
-        protected virtual float m_HoldGroundOuterDistanceFromBlueFlareOnGround { get { return mBaseAi.m_HoldGroundOuterDistanceFromBlueFlareOnGround; } }
-        protected virtual float m_HoldGroundDistanceFromFire { get { return mBaseAi.m_HoldGroundDistanceFromFire; } }
-        protected virtual float m_HoldGroundOuterDistanceFromFire { get { return mBaseAi.m_HoldGroundOuterDistanceFromFire; } }
-        protected virtual float m_HoldGroundDistanceFromFlare { get { return mBaseAi.m_HoldGroundDistanceFromFlare; } }
-        protected virtual float m_HoldGroundOuterDistanceFromFlare { get { return mBaseAi.m_HoldGroundOuterDistanceFromFlare; } }
-        protected virtual float m_HoldGroundDistanceFromFlareOnGround { get { return mBaseAi.m_HoldGroundDistanceFromFlareOnGround; } }
-        protected virtual float m_HoldGroundOuterDistanceFromFlareOnGround { get { return mBaseAi.m_HoldGroundOuterDistanceFromFlareOnGround; } }
-        protected virtual float m_HoldGroundDistanceFromTorch { get { return mBaseAi.m_HoldGroundDistanceFromTorch; } }
-        protected virtual float m_HoldGroundOuterDistanceFromTorch { get { return mBaseAi.m_HoldGroundOuterDistanceFromTorch; } }
-        protected virtual float m_HoldGroundDistanceFromTorchOnGround { get { return mBaseAi.m_HoldGroundDistanceFromTorchOnGround; } }
-        protected virtual float m_HoldGroundOuterDistanceFromTorchOnGround { get { return mBaseAi.m_HoldGroundOuterDistanceFromTorchOnGround; } }
-        protected virtual float m_MinDistanceToKeepWithSafeHaven { get { return mBaseAi.m_MinDistanceToKeepWithSafeHaven; } }
-        protected virtual float m_ExtraMarginForStopInField { get { return mBaseAi.m_ExtraMarginForStopInField; } }
-        protected virtual float m_MinDistanceToHoldFromInnerRadius { get { return mBaseAi.m_MinDistanceToHoldFromInnerRadius; } }
-
-
-        #endregion
-
-
-        #region CustomAi Properties (overridable too!)
-
-        protected virtual float m_MaxWaypointDistance { get { return 1.0f; } }
-        protected virtual float m_MinWaypointDistance { get { return 0.0f; } }
-        //protected virtual float m_FollowWaypointsSpeed { get { return mBaseAi.m_AiGoalSpeed; } }
 
         #endregion
     }

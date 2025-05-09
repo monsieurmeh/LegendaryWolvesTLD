@@ -8,7 +8,7 @@ using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
-    public class HidingWolf : BaseWolf
+    public class HidingWolf : BaseWolf, IHideBehaviorOwner
     {
         protected Vector3 mHidingPosition;
         protected Vector3 mHidingOrientation;
@@ -46,26 +46,13 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected override void Process()
-        {
-            if (CurrentMode == (AiMode)NewAiModes.Hiding)
-            {
-                ProcessHiding();
-            }
-            else
-            {
-                base.Process();
-            }
-        }
-
-
         protected override bool IsImposter()
         {
             return false;
         }
 
 
-        protected void ProcessHiding()
+        public void ProcessHiding()
         {
             if (!m_HasReachedHidingLocation)
             {
@@ -89,28 +76,20 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 mBaseAi.ScanForNewTarget();
             }
         }
-         
 
 
-        protected void EnterHiding()
+
+        public void EnterHiding()
         {
-            uint refUint = mBaseAi.m_AttackingLoopAudioID;
-            GameAudioManager.StopPlayingID(ref refUint, 100);
-            refUint = mBaseAi.m_StalkingLoopAudioID;
-            GameAudioManager.StopPlayingID(ref refUint, 100);
-            // NOW we need to override BaseAI.SetAiMode.... fuck me, thats gonna be a long one. uhggg
-            mBaseAi.ClearTarget(); 
-            PreviousMode = CurrentMode;
-            CurrentMode = (AiMode)NewAiModes.Hiding;
-            Log($"Ai can reach hiding spot at {mHidingPosition}: {mBaseAi.CanPathfindToPosition(mHidingPosition)} with pathStart success: {mBaseAi.StartPath(mHidingPosition, 10.0f)}");
+            mBaseAi.ClearTarget();
             m_HasReachedHidingLocation = false;
         }
 
 
 
-        protected void ExitHiding()
+        public void ExitHiding()
         {
-            m_HasReachedHidingLocation = false;   
+            //m_HasReachedHidingLocation = false;   
         }
     }
 }

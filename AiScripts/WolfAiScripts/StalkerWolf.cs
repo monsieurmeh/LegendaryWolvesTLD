@@ -61,7 +61,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     //Log($"[Pathfind Check] Distance from pos ({mBaseAi.m_CachedTransform.position}) to target ({mBaseAi.m_CachedTransform.position}) [{Vector3.Distance(mBaseAi.m_CachedTransform.position, mBaseAi.m_PathingToSmellTargetPos)}] is less than minSmellDistance ({mBaseAi.m_MinSmellDistance}), trying attack or returning");
                     if (mBaseAi.CanSeeTarget())
                     {
-                        mBaseAi.SetAiMode(AiMode.Attack);
+                        SetAiMode(AiMode.Attack);
                     }
                     return;
                 }
@@ -76,7 +76,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
             if (mBaseAi.CanSeeTarget())
             {
-                mBaseAi.SetAiMode(AiMode.Attack);
+                SetAiMode(AiMode.Attack);
                 return;
             }
         }
