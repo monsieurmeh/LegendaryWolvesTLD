@@ -8,7 +8,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         Default = 0,
         ScaredyWolf,
         BigWolf,
-        //Stalker,
+        HidingWolf,
+        Stalker,
         //PackLeader,
         Wanderer,
         COUNT

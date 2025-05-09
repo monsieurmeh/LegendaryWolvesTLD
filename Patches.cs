@@ -1,5 +1,8 @@
 ﻿using HarmonyLib;
 using Il2Cpp;
+using Il2CppTLD.AddressableAssets;
+using Il2CppTLD.Placement;
+using MelonLoader;
 using UnityEngine;
 using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 
@@ -85,6 +88,17 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             public static void Prefix()
             {
                 Manager?.ClearAugments();
+            }
+        }
+
+
+
+        [HarmonyPatch(typeof(ConsoleManager), "Initialize")]
+        private static class ConsoleManagerPatches_Initialize
+        {
+            internal static void Postfix()
+            {
+                uConsole.RegisterCommand("follow_wandering_wolf", new Action(LegendaryWolvesManager.TryFollowWanderingWolf));
             }
         }
     }

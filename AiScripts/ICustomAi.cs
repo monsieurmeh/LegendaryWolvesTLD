@@ -38,7 +38,19 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         PassingAttack = 1U << (int)AiMode.PassingAttack, //19 (25) 
         Howl = 1U << (int)AiMode.Howl, //1a (26)
         Disabled = 1U << (int)AiMode.Disabled, //1b (27)
+        Hiding = 1U << ((int)AiMode.Disabled + 1),
 
+        TypicalDontInterrupt =
+              Dead
+            | Attack
+            | Flee
+            | Struggle
+            | GoToPoint
+            | InteractWithProp
+            | ScriptedSequence
+            | Stunned
+            | PassingAttack
+            | Disabled,
 
         EarlyOutMaybeHoldGround =
               None
@@ -60,7 +72,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             | JoinPack
             | PassingAttack
             | Howl
-            | Disabled,
+            | Disabled
+            | Hiding,
 
         ScaredyWolfIgnoreModes =
               Attack
@@ -68,7 +81,18 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             | PassingAttack
             | Struggle
             | HoldGround,
+        
+        NewAiModes = 
+             Hiding,
     }
+
+
+    public enum NewAiModes : int
+    {
+        Hiding = (int)AiMode.Disabled + 1,
+        COUNT
+    }
+
 
     public interface ICustomAi
     {

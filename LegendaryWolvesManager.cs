@@ -1,13 +1,72 @@
 ﻿//#define DEV_BUILD_SPAWNONE
 #define DEV_BUILD_STATELABEL
 
+using HarmonyLib;
 using Il2Cpp;
+using Il2CppTLD.Scenes;
 using UnityEngine;
+using static Il2Cpp.Panel_Debug;
+using static Il2CppParadoxNotion.Services.Logger;
+using static Il2CppSystem.Linq.Expressions.Interpreter.CastInstruction.CastInstructionNoT;
+using static UnityEngine.GraphicsBuffer;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
     public class LegendaryWolvesManager
     {
+        #region CameraFollow stuff
+
+        public class CameraFollow
+        { 
+            protected Transform mTarget;
+            protected Transform mCamera;
+            protected float mDistance = 5.0f;
+            protected float mMinDistance = 3.0f;
+            protected float mMaxDistance = 10.0f;
+            protected float mXSpeed = 120.0f;
+            protected float mYSpeed = 120.0f;
+            protected float mZSpeed = 1.0f;
+            protected float mYMinLimit = 20f;
+            protected float mYMaxLimit = 80f;
+            protected float mX = 0.0f;
+            protected float mY = 0.0f;
+
+
+            public void SetTarget(Transform target, Transform camera)
+            {
+                mTarget = target;
+                mCamera = camera;
+                mX = camera.eulerAngles.x;
+                mY = camera.eulerAngles.y;
+            }
+
+
+            public void Update()
+            {
+                if (mCamera == null || mTarget == null)
+                {
+                    return;
+                }
+                //this is not working ;/
+                mCamera.position = mTarget.position + new Vector3(0.0f, 25f, 10.0f);
+                /*
+                mX += InputManager.GetAxisMouseX(GameManager.m_PlayerManager) * mXSpeed * Time.deltaTime;
+                mY -= InputManager.GetAxisMouseY(GameManager.m_PlayerManager) * mYSpeed * Time.deltaTime;
+                mDistance += InputManager.GetAxisScrollWheel(GameManager.m_PlayerManager) * mZSpeed * Time.deltaTime;
+                mY = Mathf.Clamp(mY, mYMinLimit, mYMaxLimit);
+                mDistance = Mathf.Clamp(mDistance, mMinDistance, mMaxDistance);
+                Quaternion rotation = Quaternion.Euler(mX, mY, 0);
+                Vector3 negDistance = new Vector3(0.0f, 0.0f, -mDistance);
+                Vector3 position = Quaternion.Euler(mY, mX, 0) * negDistance + mTarget.position;
+                mCamera.rotation = rotation;
+                mCamera.position = position;
+                */
+            }
+        }
+
+        #endregion
+
+
         #region Consts & Enums
 
         const float MillisecondsPerTick = 0.0001f;
@@ -45,7 +104,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         private long mStartTime = System.DateTime.Now.Ticks;
         private long mLastReadoutTime = System.DateTime.Now.Ticks;
         private bool mStartupReadoutDone = false;
-
+        private bool mFollowingWanderingWolf = false;
+        private WanderingWolf mWanderingWolfToFollow;
+        private CameraFollow mCameraFollow = new CameraFollow();
+        private Dictionary<string, List<Vector3>> mHidingSpots = new Dictionary<string, List<Vector3>>();
+        private ulong mTakenHidingSpots = 0UL;
+        
 #if DEV_BUILD_SPAWNONE
         private bool mSpawnedOne = false;
 #endif
@@ -70,7 +134,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mAiAugments = new Dictionary<int, ICustomAi>();
             mLogMessageAction = logMessageAction;
             mLogErrorAction = logErrorAction;
-
+            mHidingSpots.Add("RuralArea", new List<Vector3>());
             return true;
         }
 
@@ -97,11 +161,22 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 mLastReadoutTime = System.DateTime.Now.Ticks;
             }
+            if (mFollowingWanderingWolf)
+            {
+                if (CameraDebugMode.s_Mode != CameraDebugMode.Mode.Fly)
+                {
+                    mFollowingWanderingWolf = false;
+                }
+                else
+                {
+                    mCameraFollow.Update();
+                }
+            }
         }
 
 
 
-#endregion
+        #endregion
 
 
         #region API
@@ -201,12 +276,16 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 // Don't want to override timberwolf behaviour just yet; I have different plans for them!
                 return;
             }
-            WolfTypes newType = (WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
+            WolfTypes newType = WolfTypes.HidingWolf;// (WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
             switch (newType)
             {
                 case WolfTypes.Default:
                     //Log($"Spawning BaseWolf at {baseAi.gameObject.transform.position}!");
                     mAiAugments.Add(baseAi.GetHashCode(), new BaseWolf(baseAi));
+                    break; 
+                case WolfTypes.HidingWolf:
+                    Log($"Spawning HidingWolf at {baseAi.gameObject.transform.position}!");
+                    mAiAugments.Add(baseAi.GetHashCode(), new HidingWolf(baseAi, new Vector3(740, 148, 454), baseAi.transform.rotation.eulerAngles));
                     break;
                 case WolfTypes.ScaredyWolf:
                     //Log($"Spawning ScaredyWolf at {baseAi.gameObject.transform.position}!");
@@ -219,6 +298,10 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 case WolfTypes.BigWolf:
                     //Log($"Spawning BigWolf at {baseAi.gameObject.transform.position}!");
                     mAiAugments.Add(baseAi.GetHashCode(), new BigWolf(baseAi));
+                    break;
+                case WolfTypes.Stalker:
+                    Log($"Spawning StalkingWolf at {baseAi.gameObject.transform.position}!");
+                    mAiAugments.Add(baseAi.GetHashCode(), new StalkingWolf(baseAi));
                     break;
                 default:
                     return;
@@ -246,46 +329,96 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #endregion
 
 
-            #region Debug
+        #region Debug
 
-            public void Log(string message, bool error = false)
+        public bool FollowingWanderingWolf { get { return mFollowingWanderingWolf; } set { mFollowingWanderingWolf = value; } }
+
+
+        public static void TryFollowWanderingWolf()
+        {
+            if (CameraDebugMode.s_Mode == CameraDebugMode.Mode.Lock)
             {
-                string logMessage = $"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}";
-                if (error)
+                return;
+            }
+            if (Instance != null)
+            {
+                if (Instance.FollowingWanderingWolf && CameraDebugMode.s_Mode == CameraDebugMode.Mode.Fly)
                 {
-                    mLogErrorAction.Invoke(logMessage);
+                    Instance.StopFollowingWanderingWolf();
                 }
                 else
                 {
-                    mLogMessageAction.Invoke(logMessage);
+                    foreach (ICustomAi customAi in Instance.AiAugments.Values)
+                    {
+                        if (customAi is WanderingWolf wanderingWolf)
+                        {
+                            Instance.StartFollowingWanderingWolf(wanderingWolf);
+                        }
+                    }
                 }
             }
+        }
 
 
-            public void LogError(string message)
+        public void StopFollowingWanderingWolf()
+        {
+            mFollowingWanderingWolf = false;
+            HUDMessage.AddMessage("Following wandering wolf", false, false);
+            mCameraFollow.SetTarget(null, null);
+            FlyMode.Enter();
+        }
+
+
+        public void StartFollowingWanderingWolf(WanderingWolf wanderingWolf)
+        {
+            mFollowingWanderingWolf = true;
+            mWanderingWolfToFollow = wanderingWolf;
+            InputManager.ResetControllerState();
+            HUDMessage.AddMessage("Following wandering wolf", false, false);
+            mCameraFollow.SetTarget(wanderingWolf.BaseAi.transform, FlyMode.m_Camera.transform);
+            FlyMode.Enter();
+
+        }
+
+
+        public void Log(string message, bool error = false)
+        {
+            string logMessage = $"[{TicksSinceStart}t/{TicksSinceStart * MillisecondsPerTick}ms/{TicksSinceStart * SecondsPerTick}s] {message}";
+            if (error)
             {
-                Log(message, true);
+                mLogErrorAction.Invoke(logMessage);
             }
-
-
-            public void Log(BaseAi baseAi, string msg, bool error = false)
+            else
             {
-                Log($"{BaseAiInfo(baseAi)} {msg}", error);
+                mLogMessageAction.Invoke(logMessage);
             }
+        }
 
 
-            public void LogError(BaseAi baseAi, string msg)
-            {
-                Log(baseAi, msg, true);
-            }
+        public void LogError(string message)
+        {
+            Log(message, true);
+        }
 
 
-            public static string BaseAiInfo(BaseAi baseAi)
-            {
-                return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}] at {baseAi?.gameObject?.transform?.position ?? Vector3.zero}";
-            }
+        public void Log(BaseAi baseAi, string msg, bool error = false)
+        {
+            Log($"{BaseAiInfo(baseAi)} {msg}", error);
+        }
 
-            #endregion
+
+        public void LogError(BaseAi baseAi, string msg)
+        {
+            Log(baseAi, msg, true);
+        }
+
+
+        public static string BaseAiInfo(BaseAi baseAi)
+        {
+            return $"{baseAi?.gameObject?.name ?? Null} ({baseAi?.GetType()}) [{baseAi?.GetHashCode()}] at {baseAi?.gameObject?.transform?.position ?? Vector3.zero}";
+        }
+
+        #endregion
     }
 
 

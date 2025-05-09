@@ -16,6 +16,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mTimeOfDay = GameManager.m_TimeOfDay;
         }
 
+        protected float mTimeSinceCheckForTargetInPatrolWaypointsMode = 0.0f;
+
+
         #region ICustomAi
 
         protected BaseAi mBaseAi;
@@ -75,6 +78,11 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                     return Color.blue;
                 case AiMode.Flee:
                     return Color.green;
+                case AiMode.Investigate:
+                case AiMode.InvestigateSmell:
+                    return new Color(255, 0, 255);
+                case (AiMode)NewAiModes.Hiding:
+                    return new Color(255, 255, 0);
                 default:
                     mMarkerRenderer.gameObject.active = false;
                     return Color.clear;
@@ -174,6 +182,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             if (mBaseAi.m_CurrentMode != AiMode.Dead)
             {
+                AiMode mode = CurrentMode;
                 mBaseAi.MaybeRestoreTargetAfterSpear();
                 MaybeHoldGround();
                 mBaseAi.MaybeAttemptDodge();
@@ -318,7 +327,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 
         protected AiTarget CurrentTarget { get { return mBaseAi.m_CurrentTarget; } }
-        protected AiMode CurrentMode { get { return mBaseAi.m_CurrentMode; } }
+        protected AiMode CurrentMode { get { return mBaseAi.m_CurrentMode; } set { mBaseAi.m_CurrentMode = value; } }
+        protected AiMode PreviousMode { get { return mBaseAi.m_PreviousMode; } set { mBaseAi.m_PreviousMode = value; } }
         protected string Name { get { return mBaseAi.gameObject?.name ?? "NULL"; } }
 
 
@@ -1013,6 +1023,15 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return;
             }
+            mTimeSinceCheckForTargetInPatrolWaypointsMode += Time.deltaTime;
+            if (mTimeSinceCheckForTargetInPatrolWaypointsMode >= 10.0f)
+            {
+                mTimeSinceCheckForTargetInPatrolWaypointsMode = 0.0f;
+                mBaseAi.ScanForNewTarget();
+                mBaseAi.ScanForSmells();
+                mBaseAi.MaybeEnterWanderPause();
+                return;
+            }
             if (!mBaseAi.m_HasEnteredFollowWaypoints)
             {
                 mBaseAi.DoEnterFollowWaypoints();
@@ -1032,6 +1051,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 mBaseAi.HandleLastWaypoint();
             }
+            //mBaseAi.m_AiGoalSpeed = m_FollowWaypointsSpeed;
             mBaseAi.PathfindToWaypoint(mBaseAi.m_TargetWaypointIndex);
         }
 
@@ -1815,6 +1835,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         #region CustomAi Properties (overridable too!)
 
         protected virtual float m_MaxWaypointDistance { get { return 1.0f; } }
+        protected virtual float m_MinWaypointDistance { get { return 0.0f; } }
+        //protected virtual float m_FollowWaypointsSpeed { get { return mBaseAi.m_AiGoalSpeed; } }
 
         #endregion
     }
