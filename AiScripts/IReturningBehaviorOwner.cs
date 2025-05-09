@@ -10,10 +10,10 @@ using UnityEngine;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
-    public interface IHideBehaviorOwner : ICustomAi
+    public interface IReturningBehaviorOwner : ICustomAi
     {
-        void ProcessHiding();
-        void EnterHiding();
-        void ExitHiding(); 
+        void ProcessReturning();
+        void EnterReturning();
+        void ExitReturning();
     }
 }

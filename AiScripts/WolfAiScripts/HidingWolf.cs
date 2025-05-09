@@ -8,19 +8,56 @@ using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
-    public class HidingWolf : BaseWolf, IHideBehaviorOwner
+    public class HidingWolf : BaseWolf, IHideBehaviorOwner, IReturningBehaviorOwner
     {
         protected Vector3 mHidingPosition;
         protected Vector3 mHidingOrientation;
-        protected bool m_HasReachedHidingLocation;
         protected float m_TimeSinceLastTargetCheck;
 
         public override WolfTypes WolfType { get { return WolfTypes.HidingWolf; } }
 
-        public HidingWolf(BaseAi target, Vector3 hidingPosition, Vector3 hidingOrientation) : base(target)
+        public HidingWolf(BaseAi target) : base(target)
         {
-            mHidingOrientation = hidingOrientation;
-            AiUtils.GetClosestNavmeshPos(out mHidingPosition, hidingPosition, hidingPosition);
+            bool spotFound = false;
+            for (int i = 0, iMax = LegendaryWolvesManager.Instance.SpotsAvailable(); i < iMax; i++)
+            {
+                if (!LegendaryWolvesManager.Instance.SpotAvailable(i, out Vector3 hidingSpot, out Vector3 hidingOrientation))
+                {
+                    Log($"Spot {i} at {hidingSpot} is taken!");
+                    continue;
+                }
+                if (!AiUtils.GetClosestNavmeshPos(out Vector3 finalHidingSpot, hidingSpot, hidingSpot))
+                {
+                    Log($"Cant get closest nav mesh point to spot {i} at {hidingSpot}!");
+                    continue;
+                }
+                if (!mBaseAi.m_MoveAgent.CanFindPath(finalHidingSpot, MoveAgent.PathRequirement.FullPath))
+                {
+                    Log($"Cant pathfind to position {i} at {finalHidingSpot}!");
+                    continue;
+                }
+                mHidingPosition = finalHidingSpot;
+                mHidingOrientation = hidingOrientation;
+                LegendaryWolvesManager.Instance.TakeSpot(i);
+                Log($"Taking spot {i} at {finalHidingSpot}...");
+                spotFound = true;
+                break;
+            }
+            while (!spotFound)
+            {
+                if (AiUtils.GetRandomPointOnNavmesh(out Vector3 validPos, mBaseAi.transform.position, 250.0f, 25.0f, -1, false, 0.2f) && mBaseAi.m_MoveAgent.CanFindPath(validPos, MoveAgent.PathRequirement.FullPath))
+                {
+                    mHidingPosition = validPos;
+                    mHidingOrientation = new Vector3(UnityEngine.Random.Range(0f, 360f), 0f, 0f);
+                    spotFound = true;
+                }
+            }
+            GameObject waypointMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            GameObject.Destroy(waypointMarker.GetComponent<Collider>());
+            waypointMarker.transform.localScale = new Vector3(.5f, 100f, .5f);
+            waypointMarker.transform.position = mHidingPosition;
+            waypointMarker.GetComponent<Renderer>().material.color = Color.green;
+            waypointMarker.name = $"hidingwolf point";
         }
 
 
@@ -32,39 +69,18 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        public override void SetAiMode(AiMode mode)
-        {
-            if (mode == (AiMode)NewAiModes.Hiding && CurrentMode != mode)
-            {
-                EnterHiding();
-            }
-            else if (mode != (AiMode)NewAiModes.Hiding && CurrentMode == (AiMode)NewAiModes.Hiding)
-            {
-                ExitHiding();
-            }
-            base.SetAiMode(mode);
-        }
-
-
         protected override bool IsImposter()
         {
             return false;
         }
 
 
-        public void ProcessHiding()
+        public virtual void ProcessHiding()
         {
-            if (!m_HasReachedHidingLocation)
+            if (Vector3.Distance(mBaseAi.transform.position, mHidingPosition) >= 2.0f)
             {
-                if (Vector3.Distance(mBaseAi.transform.position, mHidingPosition) >= 2.0f)
-                {
-                    Log($"Distance is {Vector3.Distance(mBaseAi.transform.position, mHidingPosition)}");
-                    return; 
-                }
-                Log("Stopping move agent...");
-                mBaseAi.MoveAgentStop();
-                m_HasReachedHidingLocation = true;
-                mBaseAi.m_MoveAgent.PointTowardsDirection(mHidingPosition);
+                SetAiMode((AiMode)NewAiModes.Returning);
+                return;
             }
             if (m_TimeSinceLastTargetCheck <= 2.0f)
             {
@@ -79,17 +95,46 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
 
 
-        public void EnterHiding()
+        public virtual void EnterHiding()
         {
+            mBaseAi.MoveAgentStop();
             mBaseAi.ClearTarget();
-            m_HasReachedHidingLocation = false;
+            mBaseAi.m_MoveAgent.PointTowardsDirection(mHidingPosition);
         }
 
 
 
-        public void ExitHiding()
+        public virtual void ExitHiding()
         {
-            //m_HasReachedHidingLocation = false;   
+
+        }
+
+
+        public virtual void ProcessReturning()
+        {
+            mBaseAi.ScanForNewTarget();
+            if (Vector3.Distance(mBaseAi.transform.position, mHidingPosition) >= 2.0f)
+            {
+                return;
+            }
+            SetAiMode((AiMode)NewAiModes.Hiding);
+        }
+
+
+
+        public virtual void EnterReturning()
+        {
+            mBaseAi.MoveAgentStop();
+            mBaseAi.ClearTarget();
+            mBaseAi.m_AiGoalSpeed = mBaseAi.m_RunSpeed;
+            mBaseAi.StartPath(mHidingPosition, mBaseAi.m_AiGoalSpeed);
+        }
+
+
+
+        public virtual void ExitReturning()
+        {
+
         }
     }
 }

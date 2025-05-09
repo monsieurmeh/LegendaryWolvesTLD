@@ -94,7 +94,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 m_TimeSinceLastSmellCheck = 0;
             }
-            if (((1U << (int)CurrentMode) & ((uint)AiModeFlags.TypicalDontInterrupt)) == 0U)
+            if (CurrentModeFlag.NoneOf(AiModeFlags.TypicalDontInterrupt))
             {
                 if (mBaseAi.CanPathfindToPosition(GameManager.m_PlayerManager.m_LastPlayerPosition))
                 {

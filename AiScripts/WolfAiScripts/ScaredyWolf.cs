@@ -14,7 +14,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public override void SetAiMode(AiMode mode)
         {
-            if (((1U << (int)CurrentMode) & (uint)AiModeFlags.ScaredyWolfIgnoreModes) != 0U)
+            if (((AiModeFlags)(1U << (int)mode)).AnyOf(AiModeFlags.ScaredyWolfIgnoreModes))
             {
                 Log($"Scaredy wolves don't like to {mode}!");
                 mode = AiMode.Flee;

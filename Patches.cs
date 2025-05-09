@@ -99,6 +99,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             internal static void Postfix()
             {
                 uConsole.RegisterCommand("follow_wandering_wolf", new Action(LegendaryWolvesManager.TryFollowWanderingWolf));
+                uConsole.RegisterCommand("pos2", new Action(() => Log($"Pos: {GameManager.m_PlayerManager.m_LastPlayerPosition} / Dir: {GameManager.m_PlayerManager.m_LastPlayerAngle}")));
             }
         }
     }

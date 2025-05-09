@@ -34,7 +34,25 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         PassingAttack = 1U << (int)AiMode.PassingAttack, //19 (25) 
         Howl = 1U << (int)AiMode.Howl, //1a (26)
         Disabled = 1U << (int)AiMode.Disabled, //1b (27)
-        Hiding = 1U << ((int)AiMode.Disabled + 1),
+        Hiding = 1U << ((int)AiMode.Disabled + 1), //not a big fan of this convention, if they add enum states I'll need to expand, but im kind of doubting that right now... lol
+        Returning = 1U << ((int)AiMode.Disabled + 2),
+
+        MovementAllowed =
+              Attack
+            | Flee
+            | FollowWaypoints
+            | Investigate
+            | InvestigateFood
+            | InvestigateSmell
+            | Stalking
+            | Wander
+            | GoToPoint
+            | InteractWithProp
+            | ScriptedSequence
+            | PatrolPointsOfInterest
+            | HideAndSeek
+            | PassingAttack
+            | Returning,
 
         TypicalDontInterrupt =
               Dead
@@ -86,6 +104,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
     public enum NewAiModes : int
     {
         Hiding = (int)AiMode.Disabled + 1,
+        Returning,
         COUNT
     }
 }

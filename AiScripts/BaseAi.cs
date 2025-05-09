@@ -1,6 +1,9 @@
-﻿#define DEV_BUILD_STATELABEL
+﻿//#define DEV_BUILD_STATELABEL
+#define DEV_BUILD_TYPELABEL
 
+using HarmonyLib;
 using Il2Cpp;
+using Il2CppInterop.Runtime.Runtime;
 using Il2CppTLD.AI;
 using UnityEngine;
 using static Il2Cpp.BaseAi;
@@ -41,7 +44,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {AiMode.PassingAttack,          (ai) => ai.ExitPassingAttack()                  },
             {AiMode.Howl,                   (ai) => ai.ExitHowl()                           },
             {AiMode.Disabled,               (ai) => { }                                     },
-            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.ExitHiding()}
+            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.ExitHiding()},
+            {(AiMode)NewAiModes.Returning,  (ai) => (ai as IReturningBehaviorOwner)?.ExitReturning()}
         };
         private static Dictionary<AiMode, Action<CustomAiBase>> EnterAiModeDictionary = new Dictionary<AiMode, Action<CustomAiBase>>()
         {
@@ -73,7 +77,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {AiMode.PassingAttack,          (ai) => ai.EnterPassingAttack()                  },
             {AiMode.Howl,                   (ai) => ai.EnterHowl()                           },
             {AiMode.Disabled,               (ai) => { }                                      },
-            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.EnterHiding()}
+            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.EnterHiding()},
+            {(AiMode)NewAiModes.Returning,  (ai) => (ai as IReturningBehaviorOwner)?.EnterReturning()}
         }; 
         private static Dictionary<AiMode, Action<CustomAiBase>> ProcessAiModeDictionary = new Dictionary<AiMode, Action<CustomAiBase>>()
         {
@@ -105,7 +110,41 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {AiMode.PassingAttack,          (ai) => ai.ProcessPassingAttack()                  },
             {AiMode.Howl,                   (ai) => ai.ProcessHowl()                           },
             {AiMode.Disabled,               (ai) => { }                                      },
-            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.ProcessHiding()}
+            {(AiMode)NewAiModes.Hiding,     (ai) => (ai as IHideBehaviorOwner)?.ProcessHiding()},
+            {(AiMode)NewAiModes.Returning,  (ai) => (ai as IReturningBehaviorOwner)?.ProcessReturning()}
+        };
+        private static Dictionary<AiMode, AiAnimationState> SetAiAnimationStateDictionary = new Dictionary<AiMode, AiAnimationState>()
+        {
+            {AiMode.None,                   AiAnimationState.Invalid            },
+            {AiMode.Attack,                 AiAnimationState.Attack             },
+            {AiMode.Dead,                   AiAnimationState.Paused             },
+            {AiMode.Feeding,                AiAnimationState.Feeding            },
+            {AiMode.Flee,                   AiAnimationState.Flee               },
+            {AiMode.FollowWaypoints,        AiAnimationState.Wander             },
+            {AiMode.HoldGround,             AiAnimationState.HoldGround         },
+            {AiMode.Idle,                   AiAnimationState.Idle               },
+            {AiMode.Investigate,            AiAnimationState.Investigate        },
+            {AiMode.InvestigateFood,        AiAnimationState.Feeding            },
+            {AiMode.InvestigateSmell,       AiAnimationState.InvestigateSmell   },
+            {AiMode.Rooted,                 AiAnimationState.Paused             },
+            {AiMode.Sleep,                  AiAnimationState.Sleep              },
+            {AiMode.Stalking,               AiAnimationState.Stalking           },
+            {AiMode.Struggle,               AiAnimationState.Paused             },
+            {AiMode.Wander,                 AiAnimationState.Wander             },
+            {AiMode.WanderPaused,           AiAnimationState.Paused             },
+            {AiMode.GoToPoint,              AiAnimationState.GoToPoint          },
+            {AiMode.InteractWithProp,       AiAnimationState.InteractWithProp   },
+            {AiMode.ScriptedSequence,       AiAnimationState.ScriptedSequence   },
+            {AiMode.Stunned,                AiAnimationState.Paused             },
+            {AiMode.ScratchingAntlers,      AiAnimationState.Paused             },
+            {AiMode.PatrolPointsOfInterest, AiAnimationState.Wander             },
+            {AiMode.HideAndSeek,            AiAnimationState.Stalking           },
+            {AiMode.JoinPack,               AiAnimationState.Paused             },
+            {AiMode.PassingAttack,          AiAnimationState.Attack             },
+            {AiMode.Howl,                   AiAnimationState.Paused             },
+            {AiMode.Disabled,               AiAnimationState.Paused             },
+            {(AiMode)NewAiModes.Hiding,     AiAnimationState.Paused             },
+            {(AiMode)NewAiModes.Returning,  AiAnimationState.Wander          }
         };
 
 
@@ -123,7 +162,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         protected BaseAi mBaseAi;
         protected TimeOfDay mTimeOfDay;
         protected bool mSetAiModeLock = false;
-#if DEV_BUILD_STATELABEL
+#if DEV_BUILD_STATELABEL || DEV_BUILD_TYPELABEL
         protected AiMode mCachedMode = AiMode.None;
         protected bool mReadout = false;
         public Transform mMarkerTransform;
@@ -137,7 +176,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         public virtual void Augment()
         {
-#if DEV_BUILD_STATELABEL
+#if DEV_BUILD_STATELABEL || DEV_BUILD_TYPELABEL
             GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             marker.transform.localScale = new Vector3(1.0f, 250.0F, 1.0f);
             marker.GetComponent<Collider>().enabled = false;
@@ -147,12 +186,17 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mMarkerTransform.position = mBaseAi.transform.position;
             mMarkerRenderer = marker.GetComponent<Renderer>();
 #endif
+#if DEV_BUILD_TYPELABEL
+            mMarkerRenderer.material.color = GetMarkerColorByType();
+#endif
+
         }
 
-#if DEV_BUILD_STATELABEL
+#if DEV_BUILD_STATELABEL || DEV_BUILD_TYPELABEL
         public void SetMarkerColor()
         {
-            mMarkerRenderer.material.color = GetMarkerColor();
+            //mMarkerRenderer.material.color = GetMarkerColor();
+            mMarkerRenderer.material.color = GetMarkerColorByType();
         }
 
 
@@ -169,6 +213,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 case AiMode.PatrolPointsOfInterest:
                 case AiMode.FollowWaypoints:
                 case AiMode.WanderPaused:
+                case (AiMode)NewAiModes.Returning:
                     return Color.grey;
                 case AiMode.Attack:
                 case AiMode.PassingAttack:
@@ -185,6 +230,28 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 default:
                     mMarkerRenderer.gameObject.active = false;
                     return Color.clear;
+            }
+        }
+
+
+        public Color GetMarkerColorByType()
+        {
+            switch (WolfType)
+            {
+                case WolfTypes.Default:
+                    return Color.grey;
+                case WolfTypes.BigWolf:
+                    return Color.red;
+                case WolfTypes.HidingWolf:
+                    return Color.yellow;
+                case WolfTypes.Stalker:
+                    return new Color(255, 0, 255);
+                case WolfTypes.ScaredyWolf:
+                    return Color.green;
+                case WolfTypes.Wanderer:
+                    return Color.blue;
+                default:
+                    return Color.black;
             }
         }
 #endif
@@ -251,7 +318,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             }
         }
 
-        #endregion
+#endregion
 
 
         #region Core methods
@@ -281,7 +348,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
             if (CurrentMode != AiMode.Dead)
             {
-                AiMode mode = CurrentMode;
                 mBaseAi.MaybeRestoreTargetAfterSpear();
                 MaybeHoldGround();
                 mBaseAi.MaybeAttemptDodge();
@@ -308,7 +374,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             {
                 return;
             }
-            mBaseAi.SetAnimationParameters();
+            SetAnimationParameters();
             if (mBaseAi.m_SpeedForPathfindingOverride)
             {
                 return;
@@ -342,6 +408,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 
         protected AiTarget CurrentTarget { get { return mBaseAi.m_CurrentTarget; } }
         protected AiMode CurrentMode { get { return mBaseAi.m_CurrentMode; } set { mBaseAi.m_CurrentMode = value; } }
+        protected AiModeFlags CurrentModeFlag { get { return (AiModeFlags)(1U << (int)CurrentMode); } }
         protected AiMode PreviousMode { get { return mBaseAi.m_PreviousMode; } set { mBaseAi.m_PreviousMode = value; } }
         protected string Name { get { return mBaseAi.gameObject?.name ?? "NULL"; } }
 
@@ -2159,6 +2226,67 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
         #endregion
+
+
+        protected virtual void SetAnimationParameters()
+        {
+            float someFloat = mBaseAi.m_AiGoalSpeed;
+            if (mBaseAi.BaseWolf?.m_Wounded ?? false)
+            {
+                someFloat = (someFloat - mBaseAi.m_WalkSpeed) * Mathf.Clamp01(1 - mBaseAi.GetWoundedAnimParameter()) + mBaseAi.m_WalkSpeed;
+            }
+            mBaseAi.m_MoveAgent.SetMoveSpeed(someFloat);
+            mBaseAi.SetAnimStateForMoveAgent(CurrentModeFlag.AnyOf(AiModeFlags.MovementAllowed) ? MoveState.Moving : MoveState.Idle, (int)SetAiAnimationStateDictionary[CurrentMode]);
+            if (mBaseAi.BaseWolf != null)
+            {
+                if (!Utils.Approximately(mBaseAi.m_AnimParameter_Wounded_LastSent, mBaseAi.GetWoundedAnimParameter(), 0.0001f))
+                {
+                    mBaseAi.AnimSetFloat(mBaseAi.m_AnimParameter_Wounded, mBaseAi.GetWoundedAnimParameter());
+                    mBaseAi.m_AnimParameter_Wounded_LastSent = mBaseAi.GetWoundedAnimParameter();
+                }
+            }
+            mBaseAi.SetTargetHeadingParameter();
+            if (mBaseAi.m_CanPlayPitchRoll)
+            {
+                Vector3 forward = mBaseAi.m_CachedTransform.forward;
+                forward.y = 0f;
+                forward.Normalize();
+                float pitchValue = Vector3.Dot(forward, mBaseAi.m_CachedTransform.forward);
+                if (mBaseAi.m_CachedTransform.forward.y < 0f)
+                {
+                    pitchValue = -pitchValue;
+                }
+                mBaseAi.AnimSetFloat(mBaseAi.m_AnimParameter_Pitch, pitchValue);
+                Vector3 right = mBaseAi.m_CachedTransform.right;
+                right.y = 0f;
+                right.Normalize();;
+                float rollValue = Vector3.Dot(right, mBaseAi.m_CachedTransform.right);
+                if (mBaseAi.m_CachedTransform.right.y < 0f)
+                {
+                    rollValue = -rollValue;
+                }
+                BaseAi.AnimSetFloat(mBaseAi.m_AnimParameter_Roll, rollValue);
+            }
+            if (mBaseAi.m_CanPlayTurn != false)
+            {
+                if (Time.deltaTime > 0.0001f)
+                {
+                    Vector3 currentForward = mBaseAi.m_CachedTransform.forward;
+                    mBaseAi.m_PreviousForward = new Vector3(currentForward.x, 0f, currentForward.z).normalized;
+                    mBaseAi.m_turnSpeed = Utils.GetAngleDegrees(new Vector3(currentForward.x, 0f, currentForward.z).normalized, mBaseAi.m_PreviousForward) / Time.deltaTime;
+                }
+                BaseAi.AnimSetFloat(mBaseAi.m_AnimParameter_TurnSpeed, mBaseAi.m_turnSpeed);
+                SetTurnAngleParameters(mBaseAi.m_Animator, mBaseAi.m_TotalTurnAngle, mBaseAi.m_turnSpeed, mBaseAi.m_TurnHeading, mBaseAi.m_CachedTransform.forward, mBaseAi.m_AnimParameter_TurnAngle);
+            }
+            if (mBaseAi.Moose == null)
+            {
+                mBaseAi.Moose?.m_Animator.SetBoolID(mBaseAi.m_AnimParameter_IsInjured, mBaseAi.m_Wounded);
+            }
+            return;
+        }
+
+
+
 
 
         protected virtual void MaybeImposter()
