@@ -8,7 +8,7 @@ using static MonsieurMeh.Mods.TLD.LegendaryWolves.Helpers;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
-    public class HidingWolf : BaseWolf, IHideBehaviorOwner, IReturningBehaviorOwner
+    public class HidingWolf : BaseWolf
     {
         protected Vector3 mHidingPosition;
         protected Vector3 mHidingOrientation;
@@ -69,13 +69,80 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected override bool IsImposter()
+        protected override bool TestIsImposterCustom(out bool isImposter)
         {
-            return false;
+            isImposter = false;
+            return true;
         }
 
 
-        public virtual void ProcessHiding()
+        protected override bool ProcessCustom()
+        {
+            switch(CurrentMode)
+            {
+                case (AiMode)NewAiModes.Hiding:
+                    ProcessHiding();
+                    return true;
+                case (AiMode)NewAiModes.Returning:
+                    ProcessReturning();
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+
+        protected override bool GetAiAnimationStateCustom(AiMode mode, out AiAnimationState overrideState)
+        {
+            switch (mode)
+            {
+                case (AiMode)NewAiModes.Hiding:
+                    overrideState = AiAnimationState.Paused;
+                    return true;
+                case (AiMode)NewAiModes.Returning:
+                    overrideState = AiAnimationState.Wander;
+                    return true;
+                default:
+                    overrideState = AiAnimationState.Invalid;
+                    return false;
+            }
+        }
+
+
+        protected override bool IsMoveStateCustom(AiMode mode, out bool isMoveState)
+        {
+            switch (mode)
+            {
+                case (AiMode)NewAiModes.Hiding: 
+                    isMoveState = false; 
+                    return true;
+                case (AiMode)NewAiModes.Returning:
+                    isMoveState = true;
+                    return true;
+                default:
+                    isMoveState = false;
+                    return false;
+            }
+        }
+
+
+        protected override bool EnterAiModeCustom(AiMode mode)
+        {
+            switch (mode)
+            {
+                case (AiMode)NewAiModes.Hiding:
+                    EnterHiding();
+                    return true;
+                case (AiMode)NewAiModes.Returning:
+                    EnterReturning();
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+
+        protected void ProcessHiding()
         {
             if (Vector3.Distance(mBaseAi.transform.position, mHidingPosition) >= 2.0f)
             {
@@ -94,8 +161,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-
-        public virtual void EnterHiding()
+        protected void EnterHiding()
         {
             mBaseAi.MoveAgentStop();
             mBaseAi.ClearTarget();
@@ -103,14 +169,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-
-        public virtual void ExitHiding()
-        {
-
-        }
-
-
-        public virtual void ProcessReturning()
+        protected void ProcessReturning()
         {
             mBaseAi.ScanForNewTarget();
             if (Vector3.Distance(mBaseAi.transform.position, mHidingPosition) >= 2.0f)
@@ -121,20 +180,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-
-        public virtual void EnterReturning()
+        protected void EnterReturning()
         {
             mBaseAi.MoveAgentStop();
             mBaseAi.ClearTarget();
             mBaseAi.m_AiGoalSpeed = mBaseAi.m_RunSpeed;
             mBaseAi.StartPath(mHidingPosition, mBaseAi.m_AiGoalSpeed);
-        }
-
-
-
-        public virtual void ExitReturning()
-        {
-
         }
     }
 }

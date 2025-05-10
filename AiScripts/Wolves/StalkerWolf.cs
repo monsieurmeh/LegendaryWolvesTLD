@@ -18,19 +18,27 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public StalkingWolf(BaseAi target) : base(target) { }
 
 
-        protected override bool IsImposter()
+        protected override bool ProcessCustom()
         {
-            return false;
+            switch(CurrentMode)
+            {
+                case AiMode.InvestigateSmell: 
+                    ProcessInvestigateSmellCustom(); 
+                    return true;
+                default: 
+                    return false;
+            }
         }
 
 
-        public override void Augment()
+        protected override bool TestIsImposterCustom(out bool isImposter)
         {
-            base.Augment();
+            isImposter = false;
+            return true;
         }
 
 
-        protected override void ProcessInvestigateSmell()
+        protected void ProcessInvestigateSmellCustom()
         {
             if (!mBaseAi.CanPlayerBeReached(GameManager.m_PlayerManager.m_LastPlayerPosition))
             {
@@ -82,13 +90,12 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected override void PostProcess()
+        protected override bool PostProcessCustom()
         {
             if (m_TimeSinceLastSmellCheck <= 2.0f)
             {
-                base.PostProcess();
                 m_TimeSinceLastSmellCheck += Time.deltaTime;
-                return;
+                return false;
             }
             else
             {
@@ -100,15 +107,14 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 {
                     mBaseAi.m_SmellTarget = GameManager.m_PlayerManager.m_AiTarget;
                     mBaseAi.m_AiTarget = mBaseAi.m_SmellTarget;
-                    mBaseAi.m_CurrentMode = AiMode.InvestigateSmell;
-                    mBaseAi.EnterInvestigateSmell();
+                    SetAiMode(AiMode.InvestigateSmell);
                 }
                 else if (CurrentMode != AiMode.InvestigateSmell)
                 {
                     SetAiMode(AiMode.Wander);
                 }
             }
-            base.PostProcess();
+            return false;
         }
     }
 }

@@ -1,17 +1,9 @@
 ﻿//#define DEV_BUILD_SPAWNONE
 #define DEV_BUILD_STATELABEL
 
-using Harmony;
-using HarmonyLib;
 using Il2Cpp;
-using Il2CppTLD.Scenes;
-using System.Runtime.CompilerServices;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
-using static Il2Cpp.Panel_Debug;
-using static Il2CppParadoxNotion.Services.Logger;
-using static Il2CppSystem.Linq.Expressions.Interpreter.CastInstruction.CastInstructionNoT;
-using static UnityEngine.GraphicsBuffer;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -112,6 +104,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         private CameraFollow mCameraFollow = new CameraFollow();
         private Dictionary<string, List<(Vector3, Vector3)>> mHidingSpots = new Dictionary<string, List<(Vector3, Vector3)>>();
         private ulong mTakenHidingSpots = 0UL;
+        private int mSpawnInterator = 0;
         
 #if DEV_BUILD_SPAWNONE
         private bool mSpawnedOne = false;
@@ -262,6 +255,18 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             return true;
         }
 
+
+        public bool TryApplyDamage(BaseAi baseAi, float damage, float bleedOutTime, DamageSource damageSource)
+        {
+            if (!AiAugments.TryGetValue(baseAi.GetHashCode(), out ICustomAi customAi))
+            {
+                return false;
+            }
+            customAi.ApplyDamage(damage, bleedOutTime, damageSource);
+            return true;
+        }
+
+
         #endregion
 
 
@@ -280,7 +285,7 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
                 // Don't want to override timberwolf behaviour just yet; I have different plans for them!
                 return;
             }
-            WolfTypes newType = (WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
+            WolfTypes newType = (WolfTypes)(mSpawnInterator++ % (int)WolfTypes.COUNT);//(WolfTypes)new System.Random().Next(0, (int)WolfTypes.COUNT);
             switch (newType)
             {
                 case WolfTypes.Default:

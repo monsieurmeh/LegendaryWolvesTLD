@@ -23,6 +23,8 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
             mBaseAi.m_WalkSpeed *= 8;
             mBaseAi.m_turnSpeed *= 8;
             mBaseAi.m_TurnSpeedDegreesPerSecond *= 8;
+            mBaseAi.m_MaxHP *= 8;
+            mBaseAi.m_CurrentHP *= 8;
             Vector3 newScale = new Vector3(2, 2, 2);
             mBaseAi.gameObject.transform.set_localScale_Injected(ref newScale);
             base.Augment();
@@ -33,6 +35,13 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         {
             Vector3 one = Vector3.one;
             mBaseAi?.gameObject?.transform?.set_localScale_Injected(ref one);
+        }
+
+
+        protected override bool CanBleedOutCustom(out bool canBleedOut)
+        {
+            canBleedOut = false;
+            return true;
         }
 
 

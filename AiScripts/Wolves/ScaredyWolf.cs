@@ -12,17 +12,16 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         public ScaredyWolf(BaseAi target) : base(target) { }
 
 
-        public override void SetAiMode(AiMode mode)
+        protected override bool PreprocesSetAiModeCustom(AiMode mode, out AiMode newMode)
         {
             if (((AiModeFlags)(1U << (int)mode)).AnyOf(AiModeFlags.ScaredyWolfIgnoreModes))
             {
                 Log($"Scaredy wolves don't like to {mode}!");
-                mode = AiMode.Flee;
+                newMode = AiMode.Flee;
+                return true;
             }
-            if (CurrentMode != mode)
-            {
-                base.SetAiMode(mode);
-            }
+            newMode = AiMode.None;
+            return false;
         }
 
 

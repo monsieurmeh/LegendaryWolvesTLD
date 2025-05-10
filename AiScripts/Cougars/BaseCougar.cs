@@ -13,8 +13,9 @@ using Il2CppSuperSplines;
 using ModSettings;
 using UnityEngine.Playables;
 using HarmonyLib;
+using MonsieurMeh.Mods.TLD.LegendaryWolves;
 
-namespace MonsieurMeh.Mods.TLD.LegendaryWolves
+namespace LegendaryWolves.AiScripts.Cougars
 {
     public class BaseCougar : CustomAiBase, ICustomWolfAi
     {

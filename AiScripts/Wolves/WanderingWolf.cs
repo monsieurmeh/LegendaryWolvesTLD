@@ -66,8 +66,9 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         }
 
 
-        protected override bool IsImposter()
+        protected override bool TestIsImposterCustom(out bool isImposter)
         {
+            isImposter = false;
             return false;
         }
     }

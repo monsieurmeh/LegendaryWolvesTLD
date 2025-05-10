@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace MonsieurMeh.Mods.TLD.LegendaryWolves
 {
@@ -15,5 +16,6 @@ namespace MonsieurMeh.Mods.TLD.LegendaryWolves
         void Update();
         void Augment();
         void UnAugment();
+        void ApplyDamage(float damage, float bleedOutTime, DamageSource damageSource);
     }
 }
